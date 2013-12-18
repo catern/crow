@@ -1,0 +1,56 @@
+Done:
+Make define overwrite variables 
+    (will also hopefully let me use procedures more than once)
+    This happens because nothing is searching for already-existing vars
+    Fixed for define but not for procedures still
+        In eval_application, evaluting the arglist 
+            gives the old value as one of the args.
+        Fixed by making eval_application pass a 
+            copy of the procedure body back, 
+            not the one inside the procedure object
+Switched variable to using a pointer
+    then made sure define executes bind_in_current_env 
+    before evaluating the value of the variable
+Procedure environment is being modified instead of copy.
+    due to returning a pointer to sublists instead of a copy of sublists
+    bcuz of an oversight in the copying algorithm
+    Fixed by centralizing and correcting the copying algorithm
+Add number of vars to environment
+Garbage collection
+    Pairs
+    strings
+Language features:
+    Cons
+Weird as heck, node_copy works without a return value
+cond
+let
+define for procedures
+print (display so-and-so)
+strings
+
+Todo:
+Primitives:
+    set-car, set-cdr don't actually work
+        for pairs or in expressions
+        they work for pair-bound symbol-variable args i guess
+    macros (i.e., user-defined special forms)
+    apply for compound?
+        this can be done by simply switching apply to
+        take a procedure object instead of a node;
+        this necessitates turning primitives into procedures
+        (so, create apply-prim and bind each primitive to a form
+        involving it)
+Code:
+    enumerate/filter/map/accumulate
+Implementation details:
+    switch to passing pointers
+    also find a way to pass the actual variable
+    dynamic typing and coercion
+    switch used_pointers array to a tree
+    switch to linked list lists
+    turn primitive procedures into proc objects
+        this way they can be manipulated like other procedures
+        possibly not necessary?
+    proper transformations maybe (define let_to_lambda cond_to_if)
+
+special form: (streamcons x y) -> (cons x (delay y))))
