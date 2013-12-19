@@ -276,65 +276,65 @@ special_form(struct node *expr)
 
 
 struct node
-eval(struct node expr, struct environment *env)
+eval(struct node *expr, struct environment *env)
 {
-    switch (expr.type) {
+    switch (expr->type) {
         case NUMBER: // these fundamental data types are self-evaluating
         case PAIR:
         case STRING:
         case NIL:
-            return expr;
+            return *expr;
             break;
         case DELAY: // this is specially not evaluated until forced
-            return expr;
+            return *expr;
             break;
         case LIST:
-            switch (special_form(expr.list[0])) { 
+            switch (special_form(expr->list[0])) { 
                 // special syntactic forms need special handling
                 // (i.e., forms where you can't simply eval all the arguments)
                 case IF:
-                    return eval_if(expr, env);
+                    return eval_if(*expr, env);
                     break;
                 case COND:
-                    return eval_cond(expr, env);
+                    return eval_cond(*expr, env);
                     break;
                 case DEFINE:
-                    return eval_define(expr, env);
+                    return eval_define(*expr, env);
                     break;
                 case LAMBDA:
-                    return eval_lambda(expr, env);
+                    return eval_lambda(*expr, env);
                     break;
                 case DELAY:
-                    return eval_delay(expr, env);
+                    return eval_delay(*expr, env);
                     break;
                 case QUOTE:
-                    return eval_quote(expr, env);
+                    return eval_quote(*expr, env);
                     break;
                 case LET:
-                    return eval_let(expr, env);
+                    return eval_let(*expr, env);
                     break;
                 case SETCAR:
-                    return eval_setcar(expr, env);
+                    return eval_setcar(*expr, env);
                     break;
                 case SETCDR:
-                    return eval_setcdr(expr, env);
+                    return eval_setcdr(*expr, env);
                     break;
                 case LOAD:
-                    return eval_load(expr, env);
+                    return eval_load(*expr, env);
                     break;
                 default:
-                    return eval_application(expr, env);
+                    return eval_application(*expr, env);
             }
             break;
         case SYMBOL:
-            if (primitive_proc(expr))
-                return expr;
+            if (primitive_proc(*expr))
+                return *expr;
             else {
-                return lookup_value(env, expr);
+                return lookup_value(env, *expr);
             }
             break;
         default:
-            printf("eval: Unknown expression type %d;\n", expr.type);
+            printf("eval: Unknown expression type %d;\n", expr->type);
     }
 }
 
@@ -343,7 +343,7 @@ eval_setcar(struct node expr, struct environment *env)
 {
     struct variable *var;
     var = lookup(env,*expr.list[1]);
-    var->value->pair->car = node_copy(eval(*expr.list[2], env));
+    var->value->pair->car = node_copy(eval(expr.list[2], env));
     return nil_node;
 }
 
@@ -352,7 +352,7 @@ eval_setcdr(struct node expr, struct environment *env)
 {
     struct variable *var;
     var = lookup(env,*expr.list[1]);
-    var->value->pair->cdr = node_copy(eval(*expr.list[2], env));
+    var->value->pair->cdr = node_copy(eval(expr.list[2], env));
     return nil_node;
 }
 
@@ -367,7 +367,7 @@ eval_let(struct node expr, struct environment *env)
 
     for (i = 0; i < expr.list[1]->nlist; i++) {
         varlist[i].symbol = expr.list[1]->list[i]->list[0]->symbol;
-        varlist[i].value = node_copy(eval(*expr.list[1]->list[i]->list[1], env));
+        varlist[i].value = node_copy(eval(expr.list[1]->list[i]->list[1], env));
     }
 
     struct node *allocbody;
@@ -383,7 +383,7 @@ eval_let(struct node expr, struct environment *env)
     // body.list will get gc'd if we don't copy it, since it isn't 
     // actually allocated, it's an allocated_pointer+1
 
-    return eval(*allocbody, newenv);
+    return eval(allocbody, newenv);
 }
 
 struct node
@@ -394,7 +394,7 @@ eval_cond(struct node expr, struct environment *env)
         if ((expr.list[i]->list[0]->type == SYMBOL && 
                     !strcmp(expr.list[i]->list[0]->symbol,"else")) ||
             istrue(*expr.list[i]->list[0], env)) {
-            return eval(*expr.list[i]->list[1], env);
+            return eval(expr.list[i]->list[1], env);
         }
     }
 }
@@ -471,7 +471,7 @@ eval_define(struct node expr, struct environment *env)
         var.value = varvalue; 
         bind_in_current_env(env, var);
 
-        (*varvalue) = eval(*expr.list[2], env);
+        (*varvalue) = eval(expr.list[2], env);
     }
     return (*varvalue);
 }
@@ -482,7 +482,7 @@ eval_load(struct node expr, struct environment *env)
     if (expr.list[1]->type == STRING) {
         char* filename;
         filename = expr.list[1]->string;
-        eval(*parse_file(filename), env);
+        eval(parse_file(filename), env);
     }
     return nil_node;
 }
@@ -490,7 +490,7 @@ eval_load(struct node expr, struct environment *env)
 int
 istrue(struct node expr, struct environment *env)
 {
-    expr = eval(expr, env);
+    expr = eval(&expr, env);
 
     if (expr.type == NUMBER && expr.number == 0)
         return 0;
@@ -518,9 +518,9 @@ struct node
 eval_if(struct node expr, struct environment *env)
 {
     if (istrue(*expr.list[1], env))
-        return eval(*expr.list[2], env);
+        return eval(expr.list[2], env);
     else
-        return eval(*expr.list[3], env);
+        return eval(expr.list[3], env);
 }
 
 struct node
@@ -531,7 +531,7 @@ eval_application(struct node expr, struct environment *env)
     int i;
 
     for (i = 0; i < expr.nlist; i++) {
-        cur = eval(*expr.list[i], env);
+        cur = eval(expr.list[i], env);
         expr.list[i] = nalloc();
         *expr.list[i] = cur;
     }
@@ -591,7 +591,7 @@ apply_compound(struct node proc, struct node *args[], int n)
 
     extend_envlist(proc.proc->env, varlist, i);
 
-    return eval(*proc.proc->body, proc.proc->env);
+    return eval(proc.proc->body, proc.proc->env);
 }
 
 struct node
@@ -852,7 +852,7 @@ main()
     bind_in_current_env(globalenv, nilvar);
 
     // get our defaults
-    eval(*parse_file("defaults.scm"), globalenv);
+    eval(parse_file("defaults.scm"), globalenv);
 
     printf(">>");
     while ((c = getch()) != EOF) {
@@ -867,7 +867,7 @@ main()
             //print_node(&root);
 
             // eval the s expression
-            result = eval(root, globalenv);
+            result = eval(&root, globalenv);
 
             // print the resulting s expression
             print_node(&result);
