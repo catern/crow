@@ -45,3 +45,9 @@ procalloc()
 {
     return (struct procedure *) malloc_mon(sizeof(struct procedure));
 }
+
+struct variable *
+varalloc()
+{
+    return (struct variable *) malloc_mon(sizeof(struct variable));
+}
