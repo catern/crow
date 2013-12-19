@@ -393,7 +393,7 @@ eval_cond(struct node expr, struct environment *env)
     for (i = 1; i < expr.nlist; i++) {
         if ((expr.list[i]->list[0]->type == SYMBOL && 
                     !strcmp(expr.list[i]->list[0]->symbol,"else")) ||
-            istrue(*expr.list[i]->list[0], env)) {
+            istrue(expr.list[i]->list[0], env)) {
             return eval(expr.list[i]->list[1], env);
         }
     }
@@ -488,11 +488,11 @@ eval_load(struct node expr, struct environment *env)
 }
 
 int
-istrue(struct node expr, struct environment *env)
+istrue(struct node *expr, struct environment *env)
 {
-    expr = eval(&expr, env);
+    struct node val = eval(expr, env);
 
-    if (expr.type == NUMBER && expr.number == 0)
+    if (val.type == NUMBER && val.number == 0)
         return 0;
     else
         return 1;
@@ -517,7 +517,7 @@ node_equal(struct node n1, struct node n2)
 struct node
 eval_if(struct node expr, struct environment *env)
 {
-    if (istrue(*expr.list[1], env))
+    if (istrue(expr.list[1], env))
         return eval(expr.list[2], env);
     else
         return eval(expr.list[3], env);
