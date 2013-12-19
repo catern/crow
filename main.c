@@ -244,28 +244,28 @@ lookup_value(struct environment *envlist, struct node expr)
 // evaluation
 
 int
-special_form(struct node expr)
+special_form(struct node *expr)
 {
-    if (expr.type == SYMBOL) {
-        if (!strcmp("if", expr.symbol)) 
+    if (expr->type == SYMBOL) {
+        if (!strcmp("if", expr->symbol)) 
             return IF;
-        else if (!strcmp("define", expr.symbol)) 
+        else if (!strcmp("define", expr->symbol)) 
             return DEFINE;
-        else if (!strcmp("lambda", expr.symbol)) 
+        else if (!strcmp("lambda", expr->symbol)) 
             return LAMBDA;
-        else if (!strcmp("delay", expr.symbol)) 
+        else if (!strcmp("delay", expr->symbol)) 
             return DELAY;
-        else if (!strcmp("quote", expr.symbol)) 
+        else if (!strcmp("quote", expr->symbol)) 
             return QUOTE;
-        else if (!strcmp("cond", expr.symbol)) 
+        else if (!strcmp("cond", expr->symbol)) 
             return COND;
-        else if (!strcmp("let", expr.symbol)) 
+        else if (!strcmp("let", expr->symbol)) 
             return LET;
-        else if (!strcmp("set-car!", expr.symbol)) 
+        else if (!strcmp("set-car!", expr->symbol)) 
             return SETCAR;
-        else if (!strcmp("set-cdr!", expr.symbol)) 
+        else if (!strcmp("set-cdr!", expr->symbol)) 
             return SETCDR;
-        else if (!strcmp("load", expr.symbol)) 
+        else if (!strcmp("load", expr->symbol)) 
             return LOAD;
         else
             return 0;
@@ -289,7 +289,7 @@ eval(struct node expr, struct environment *env)
             return expr;
             break;
         case LIST:
-            switch (special_form(*expr.list[0])) { 
+            switch (special_form(expr.list[0])) { 
                 // special syntactic forms need special handling
                 // (i.e., forms where you can't simply eval all the arguments)
                 case IF:
