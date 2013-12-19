@@ -25,6 +25,8 @@ struct variable undefinedvar;
 // end special nodes
 
 // reading input
+void
+file_eval(char *, struct environment *);
 
 int getch(void);
 void ungetch(int);
@@ -724,25 +726,7 @@ eval_load(struct node expr, struct environment *env)
     if (expr.list[1].type == STRING) {
         char* filename;
         filename = expr.list[1].string;
-        // open a file and read it
-        FILE *readfile;
-        readfile = fopen(filename, "r");
-        if (readfile == NULL) {
-            printf("load: not a valid file: %s\n", filename);
-            return nil_node;
-        }
-        fseek(readfile, 0, SEEK_END);
-        long pos = ftell(readfile);
-        fseek(readfile, 0, SEEK_SET);
-        readbuf = malloc(pos);
-        fread(readbuf, pos, 1, readfile);
-        fclose(readfile);
-        readlength = pos - 1;
-
-        // parse what is currently awaitin' to be parsed
-        while (readbufp < readlength) {
-            eval(parse_token(), env);
-        }
+        file_eval(filename, env);
     }
     return nil_node;
 }
@@ -1094,6 +1078,30 @@ read_list()
     return root;
 }
 
+void
+file_eval(char *filename, struct environment *env)
+{
+    FILE *readfile;
+    readfile = fopen(filename, "r");
+    if (readfile == NULL) {
+      printf("file_eval: not a valid file: %s\n", filename);
+    }
+    fseek(readfile, 0, SEEK_END);
+    long pos = ftell(readfile);
+    fseek(readfile, 0, SEEK_SET);
+    readbuf = malloc(pos);
+    fread(readbuf, pos, 1, readfile);
+    fclose(readfile);
+    readlength = pos - 1;
+
+    // parses and evals what is currently in the queue, throwing away the result
+    // ^ WHAT DOES THAT MEAN
+    while (readbufp < readlength) {
+      eval(parse_token(), env);
+    }
+    return;
+}
+
 main()
 {
     int c;
@@ -1104,27 +1112,10 @@ main()
     struct environment globalenv[MAXENV] = {1, {}};
 
     // nil is manually bound to the empty list
-    static struct node nil = {NIL};
-    struct variable nilvar = {"nil", &nil};
+    struct variable nilvar = {"nil", &nil_node};
     bind_in_current_env(globalenv, nilvar);
 
-    // open our defaults file and read it
-    FILE *readfile;
-    readfile = fopen("defaults.scm", "r");
-    //readfile = fopen("attempt.scm", "r");
-    fseek(readfile, 0, SEEK_END);
-    long pos = ftell(readfile);
-    fseek(readfile, 0, SEEK_SET);
-    readbuf = malloc(pos);
-    fread(readbuf, pos, 1, readfile);
-    fclose(readfile);
-    readlength = pos - 1;
-
-    // parse what is currently in the queue
-    while (readbufp < readlength) {
-        root = parse_token();
-        result = eval(root, globalenv);
-    }
+    file_eval("defaults.scm", globalenv);
 
     printf(">>");
     while ((c = getch()) != EOF) {
