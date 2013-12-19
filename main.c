@@ -1,43 +1,31 @@
 /* insert GPLv3+ here */
 /* TODO: 
+   segment my code!
    switch to union types
    switch to passing pointers around
+//TODO: switch to passing pointers around instead of structs
+//TODO: modify things so apply_proc can modify the environment? maybe?
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include "types.h"
+#include "gc.h"
+#include "printnode.h"
 
-#define MAXTOKEN 100
-#define MAXSTRING 1000
-#define MAXCHARBUF 100
-#define MAXPOINTERS 20000
+// special nodes
+struct node nil_node = { .type = NIL };
 
-#define TRUE 1
-#define FALSE 0
+struct node true_node = { .type = NUMBER, .number = 1 };
+struct node false_node = { .type = NUMBER, .number = 0 };
 
-void *allocated[MAXPOINTERS];
-int nextpointer = 0;
+struct variable undefinedvar;
 
-void *
-malloc_mon(size_t);
+// end special nodes
 
-void *
-malloc_mon(size_t size)
-{
-#ifdef MALLOC_DEBUG
-    printf("malloc: nextpoiner: %d\n", nextpointer);
-#endif
-    if (nextpointer < MAXPOINTERS) {
-        allocated[nextpointer] = malloc(size);
-        return allocated[nextpointer++];
-    }
-    else {
-        printf("malloc_mon: Golly that's a lot of pointers!\n");
-        return malloc(size);
-    }
-}
+// reading input
 
-
-char *strcpy(char *dest, const char *src);
 int getch(void);
 void ungetch(int);
 
@@ -47,7 +35,6 @@ int bufp = 0; /* next free space in chbuf */
 char *readbuf; // buffer for reading chars
 int readbufp = 0;
 int readlength = 0;
-
 
 int getch()
 {
@@ -82,67 +69,6 @@ int gettoken(char *token)
     }
     else
         return c;
-}
-
-#define MAXLIST 20
-
-enum 
-// data types
-{ NIL = 1, LIST, SYMBOL, NUMBER, STRING, PROC, PAIR, 
-//special forms
-IF, LAMBDA, DEFINE, DELAY, QUOTE, COND, LET, SETCAR, SETCDR, LOAD};
-
-
-//remember to edit node_copy when editing this
-struct node {
-    int type;
-    char *symbol;
-    double number;
-    struct node *list;
-    struct procedure *proc;
-    struct pair *pair;
-    int nlist;
-    char *string;
-};
-
-struct node nil_node = { .type = NIL };
-
-struct node true_node = { .type = NUMBER, .number = 1 };
-struct node false_node = { .type = NUMBER, .number = 0 };
-
-struct pair {
-    struct node *car;
-    struct node *cdr;
-};
-
-struct pair *
-pairalloc()
-{
-    return (struct pair *) malloc_mon(sizeof(struct pair));
-}
-
-struct node *
-nalloc()
-{
-    return (struct node *) malloc_mon(sizeof(struct node));
-}
-
-struct node *
-nlistalloc()
-{
-    return (struct node *) malloc_mon(sizeof(struct node[MAXLIST]));
-}
-
-char *
-tokenalloc()
-{
-    return (char *) malloc_mon(sizeof(char[MAXTOKEN]));
-}
-
-char *
-stralloc()
-{
-    return (char *) malloc_mon(sizeof(char[MAXSTRING]));
 }
 
 struct node
@@ -238,6 +164,7 @@ parse_token()
 struct node *
 parse_token_ll()
 {
+  // this parses tokens into linked lists (lists constructed from pairs) instead of array list types
     char token[MAXTOKEN];
     int c;
 
@@ -329,62 +256,14 @@ parse_token_ll()
 }
 
 
-void
-print_list(struct node expr)
-{
-    int i;
-    printf("(");
-    for (i = 0; i < expr.nlist; i++) {
-        switch (expr.list[i].type) {
-            case LIST:
-                print_list(expr.list[i]);
-                break;
-            case SYMBOL:
-                printf("%s ", expr.list[i].symbol);
-                break;
-            case NUMBER:
-                printf("%f ", expr.list[i].number);
-                break;
-        }
-    }
-    if (i != 0)
-        printf("\b) ");
-    else
-        printf(") ");
-}
-
 /* READ STEP, COMPLETE! */
 
 /* EVAL STEP, BEGIN! */
-
-#define MAXVAR 200
-#define MAXENV 100
-
-struct variable {
-    char *symbol;
-    struct node *value;
-};
-
-struct environment {
-    int status;
-    struct variable vars[MAXVAR];
-};
-
-struct procedure {
-    char symbols[MAXTOKEN][MAXVAR];
-    struct node body;
-    struct environment *env;
-    int nargs;
-};
-
 struct node
 eval_setcar(struct node, struct environment *);
 
 struct node
 eval_setcdr(struct node, struct environment *);
-
-void
-minimal_print_node(struct node);
 
 struct node
 apply(struct node, struct node *, int);
@@ -434,8 +313,6 @@ lookup(struct environment *, struct node);
 struct environment *
 copy_environment_list(struct environment *);
 
-struct variable undefinedvar;
-
 struct environment *
 envlistalloc()
 {
@@ -461,13 +338,13 @@ node_copy(struct node oldnode)
 
     switch (oldnode.type) {
         case LIST:
-            (*newnode).list = nlistalloc();
+            newnode->list = nlistalloc();
             for (i=0; i < oldnode.nlist; i++)
-                (*newnode).list[i] = *node_copy(oldnode.list[i]);
-            (*newnode).nlist = oldnode.nlist;
+                newnode->list[i] = *node_copy(oldnode.list[i]);
+            newnode->nlist = oldnode.nlist;
             break;
         case NUMBER:
-            (*newnode).number = oldnode.number;
+            newnode->number = oldnode.number;
             break;
         case STRING:
             string = stralloc();
@@ -475,31 +352,31 @@ node_copy(struct node oldnode)
             newnode->string = string;
             break;
         case SYMBOL:
-            (*newnode).symbol = oldnode.symbol;
+            newnode->symbol = oldnode.symbol;
             break;
         case PROC:
-            (*newnode).proc = procalloc();
+            newnode->proc = procalloc();
             // env
-            (*(*newnode).proc).env = copy_environment_list((*oldnode.proc).env);
+            newnode->proc->env = copy_environment_list(oldnode.proc->env);
             // args
-            for (i = 0; i < (*oldnode.proc).nargs; i++)
-                strcpy((*(*newnode).proc).symbols[i],(*oldnode.proc).symbols[i]);
-            (*(*newnode).proc).nargs = (*oldnode.proc).nargs;
+            for (i = 0; i < oldnode.proc->nargs; i++)
+                strcpy(newnode->proc->symbols[i],oldnode.proc->symbols[i]);
+            newnode->proc->nargs = oldnode.proc->nargs;
             // body
-            (*(*newnode).proc).body = *node_copy((*oldnode.proc).body);
+            newnode->proc->body = *node_copy(oldnode.proc->body);
             break;
         case PAIR:
-            (*newnode).pair = pairalloc();
-            (*(*newnode).pair).car = node_copy(*(*oldnode.pair).car);
-            (*(*newnode).pair).cdr = node_copy(*(*oldnode.pair).cdr);
+            newnode->pair = pairalloc();
+            newnode->pair->car = node_copy(*oldnode.pair->car);
+            newnode->pair->cdr = node_copy(*oldnode.pair->cdr);
             break;
         case NIL:
             break;
         default:
-            (*newnode).symbol = oldnode.symbol;
+            newnode->symbol = oldnode.symbol;
             printf("remember to update node_copy for type %d\n", oldnode.type);
     }
-    (*newnode).type = oldnode.type;
+    newnode->type = oldnode.type;
     return newnode;
 }
 
@@ -557,7 +434,7 @@ bind_in_current_env(struct environment *envlist, struct variable var)
     look = lookup(envlist, temp);
     if (look != &undefinedvar) { 
         // if it already exists, just change the value pointer to the new one
-        (*look).value = var.value;
+        look->value = var.value;
         return envlist;
     }
 
@@ -601,7 +478,7 @@ lookup_value(struct environment *envlist, struct node expr)
     struct variable *var;
     var = lookup(envlist, expr);
     if (var != &undefinedvar)
-        return *node_copy(*(*var).value);
+        return *node_copy(*var->value);
     else
         return nil_node;
         printf("lookup_value: looked up a nonexistent variable: %s\n", expr.symbol);
@@ -968,9 +845,9 @@ apply_compound(struct node proc, struct node args[], int n)
         i++;
     }
 
-    extend_envlist((*proc.proc).env, varlist, i);
+    extend_envlist(proc.proc->env, varlist, i);
 
-    return eval((*proc.proc).body, (*proc.proc).env);
+    return eval(proc.proc->body, proc.proc->env);
 }
 
 struct node
@@ -984,16 +861,14 @@ create_procedure(char **arglist, int n, struct node body, struct environment *en
     envlist = env;
 
     proc.proc = procalloc();
-    (*proc.proc).body = body;
-    (*proc.proc).nargs = n;
+    proc.proc->body = body;
+    proc.proc->nargs = n;
     for (i = 0; i < n; i++)
-        strcpy((*proc.proc).symbols[i],arglist[i]);
-    (*proc.proc).env = envlist;
+        strcpy(proc.proc->symbols[i],arglist[i]);
+    proc.proc->env = envlist;
     proc.type = PROC;
     return proc;
 }
-
-
 
 struct node
 apply(struct node proc, struct node *args, int n)
@@ -1006,9 +881,6 @@ apply(struct node proc, struct node *args, int n)
     else
         return apply_compound(proc, args, n);
 }
-
-double
-fabs(double);
 
 struct node
 apply_prim(struct node proc, struct node args[], int n)
@@ -1072,16 +944,16 @@ apply_prim(struct node proc, struct node args[], int n)
     else if (!strcmp(proc.symbol,"cons")) {
         struct pair *newpair;
         newpair = pairalloc();
-        (*newpair).car = &args[0];
-        (*newpair).cdr = &args[1];
+        newpair->car = &args[0];
+        newpair->cdr = &args[1];
         result.type = PAIR;
         result.pair = newpair;
     }
     else if (!strcmp(proc.symbol,"car")) {
-        return *(*args[0].pair).car;
+        return *args[0].pair->car;
     }
     else if (!strcmp(proc.symbol,"cdr")) {
-        return *(*args[0].pair).cdr;
+        return *args[0].pair->cdr;
     }
     else if (!strcmp(proc.symbol,"null?")) {
         if (args[0].type == NIL)
@@ -1127,7 +999,7 @@ apply_prim(struct node proc, struct node args[], int n)
                 printf("\n");
         }
         else 
-            minimal_print_node(args[0]);
+            minimal_print_node(&args[0]);
             
         result.type = NIL;
         return result;
@@ -1198,274 +1070,6 @@ primitive_proc(struct node proc)
         return 0;
 }
 
-/* garbage collection procedures */
-
-void
-garbage_collect(struct environment *);
-
-int
-add_to_pointerlist(void *[], void *[], int , int );
-
-void
-compress_allocated(void);
-
-void
-garbage_collect(struct environment *env)
-{
-    int i, j, usedp = 0;
-    void *inuse[MAXPOINTERS];
-    usedp = env_pointers(inuse, env, usedp);
-    printf("pre-gc nextpointer: %d\n", nextpointer);
-    for (i = 0; i < nextpointer; i++) {
-  //      printf("check\n");
-        if (pointer_in_list(inuse, allocated[i], usedp))
-            ;
-        else {
-  //          printf("FREEING GARBAGE! ");
-            free(allocated[i]);
-            allocated[i] = NULL;
-        }
-    }
-    compress_allocated();
-    printf("post-gc nextpointer: %d\n", nextpointer);
-}
-
-void
-compress_allocated(void)
-{
-    int i, j;
-    for (i = 0; i < nextpointer; i++) { // search through all the possibly allocated pointers
-        if (allocated[i]==NULL) { // if we find a null pointer
-            for (j = i; j < nextpointer; j++) { // search the space past it
-                if (allocated[j] != NULL) { // for a non-null pointer
-                    allocated[i] = allocated[j]; // put the non-null pointer in the null space
-                    allocated[j] = NULL; // mark the non-null's former space as free
-                    break; // go back to searching for null pointers
-                }
-            }
-        }
-    }
-    for (i = 0; allocated[i] != NULL; i++) // find the first null
-        ;
-    nextpointer = i; // change nextpointer allocation will start with the first null
-}
-
-
-int
-pointer_in_list(void *mlist[], void *pointer, int mn)
-{
-    int i;
-
-    for (i = 0; i < mn; i++) {
-        if (mlist[i] == pointer)
-            return 1;
-    }
-    return 0;
-}
-
-/*
-struct environment {
-    int status;
-    struct variable vars[MAXVAR];
-};
-*/
-
-/*
-struct variable {
-    char *symbol;
-    struct node *value;
-};
-*/
-
-int
-env_pointers(void *mlist[], struct environment *env, int mn)
-{
-    int i, j;
-
-    if (pointer_in_list(mlist, (void *) env, mn))
-        return mn;
-
-    mlist[mn++] = env;
-
-    for (i = 0; env[i].status != 0; i++) {
-        for (j=0; j < (env[i].status - 1); j++) {
-            mn = node_pointers(mlist, env[i].vars[j].value, mn);
-            mlist[mn++] = env[i].vars[j].symbol;
-        }
-    }
-    return mn;
-}
-
-/*
-struct node {
-    int type;
-    char *symbol;
-    double number;
-    struct node *list;
-    struct procedure *proc;
-    struct pair *pair;
-    int nlist;
-    char *string;
-};
-*/
-
-int
-node_pointers(void *mlist[], struct node *expr, int mn)
-{
-    int i;
-
-    if (pointer_in_list(mlist, (void *) expr, mn))
-        return mn;
-
-    mlist[mn++] = expr;
-
-    switch ((*expr).type) {
-        case LIST:
-            // get the pointers from each node in the list
-            // this will also include the list itself at list[0] (I think)
-            for (i=0; i < (*expr).nlist; i++) {
-                mn = node_pointers(mlist, &((*expr).list[i]), mn);
-            }
-            break;
-        case PROC:
-            mn = proc_pointers(mlist, ((*expr).proc), mn);
-            break;
-        case NUMBER:
-            // ain't no pointers here!
-            break;
-        case SYMBOL:
-            mlist[mn++] = (*expr).symbol;
-            break;
-        case STRING:
-            mlist[mn++] = (*expr).string;
-            break;
-        case PAIR:
-            mlist[mn++] = expr->pair;
-            mn = node_pointers(mlist, expr->pair->car, mn);
-            mn = node_pointers(mlist, expr->pair->cdr, mn);
-            break;
-        case NIL:
-            break;
-        default:
-            mlist[mn++] = (*expr).symbol;
-            printf("node_pointers: unknown type %d\n", expr->type);
-    }
-
-    return mn;
-}
-
-/*
-struct procedure {
-    char symbols[MAXTOKEN][MAXVAR];
-    struct node body;
-    struct environment *env;
-    int nargs;
-};
-*/
-
-int
-proc_pointers(void *mlist[], struct procedure *proc, int mn)
-{
-    int i;
-
-    if (pointer_in_list(mlist, (void *) proc, mn))
-        return mn;
-
-    mlist[mn++] = proc;
-
-    // process the body of the proc
-    mn = node_pointers(mlist, &(*proc).body, mn);
-    // process the env of the proc
-    mn = env_pointers(mlist, (*proc).env, mn);
-    // process the args of the proc 
-    for (i=0; i < (*proc).nargs ; i++) {
-        mlist[mn++] = (*proc).symbols[i];
-    }
-        
-
-    return mn;
-}
- 
-// printing
-
-void
-minimal_print_node(struct node expr)
-{
-    switch (expr.type) {
-        case NUMBER:
-            printf("%f", expr.number);
-            break;
-        case SYMBOL:
-            printf("%s", expr.symbol);
-            break;
-        case PROC:
-            printf("<procedure>");
-            break;
-        case LIST:
-            print_list(expr);
-            break;
-        case PAIR:
-            printf("<pair>");
-            break;
-        case STRING:
-            printf("%s", expr.string);
-            break;
-        default:
-            printf("<type: %d>", expr.type);
-            break;
-    }
-}
-
-void
-print_node(struct node expr)
-{
-    int i;
-
-    switch (expr.type) {
-        case NUMBER:
-            printf("\033[1;37mType:\033[0m Number\n");
-            printf("\033[1;37mValue:\033[0m %f\n", expr.number);
-            break;
-        case SYMBOL:
-            printf("\033[1;37mType:\033[0m Symbol\n");
-            printf("\033[1;37mValue:\033[0m %s\n", expr.symbol);
-            break;
-        case PROC:
-            printf("\033[1;37mType:\033[0m Procedure\n");
-            printf("\033[1;37mArgs:\033[0m ");
-            for (i = 0; i < (*expr.proc).nargs; i++)
-                printf("%s ", (*expr.proc).symbols[i]);
-            //printf("\n\033[1;37mBody:\033[0m \n");
-            //print_node((*expr.proc).body);
-            printf("\n\033[1;37mBody:\033[0m ");
-            minimal_print_node((*expr.proc).body);
-            printf("\n");
-            break;
-        case LIST:
-            printf("\033[1;37mType:\033[0m List\n");
-            printf("\033[1;37mValue:\033[0m ");
-            print_list(expr);
-            printf("\n");
-            break;
-        case STRING:
-            printf("\033[1;37mType:\033[0m String\n");
-            printf("\033[1;37mValue:\033[0m ");
-            printf("%s\n", expr.string);
-            break;
-        case PAIR:
-            printf("\033[1;37mType:\033[0m Pair\n");
-            printf("\033[1;37mCar:\033[0m ");
-            minimal_print_node(*(*expr.pair).car);
-            printf("\n\033[1;37mCdr:\033[0m ");
-            minimal_print_node(*(*expr.pair).cdr);
-            printf("\n");
-            break;
-        default:
-            printf("\033[1;37mType:\033[0m %d\n", expr.type);
-            break;
-    }
-}
-
 struct node
 read_list()
 {
@@ -1483,15 +1087,13 @@ read_list()
         if (!iswspace(c)) {
             ungetch(c);
             root = *parse_token_ll();
-            //print_node(root);
+            //print_node(&root);
         }
     } 
     ungetch('\n');
     return root;
 }
 
-//TODO: switch to passing pointers around instead of structs
-//TODO: modify things so apply_proc can modify the environment? maybe?
 main()
 {
     int c;
@@ -1534,13 +1136,13 @@ main()
             root = parse_token();
 
             // print the unparsed s-exp
-            //print_node(root);
+            //print_node(&root);
 
             // eval the s expression
             result = eval(root, globalenv);
 
             // print the resulting s expression
-            print_node(result);
+            print_node(&result);
 
             // free pointers that cannot be accessed
             garbage_collect(globalenv);
