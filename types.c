@@ -31,3 +31,15 @@ stralloc()
 {
     return (char *) malloc_mon(sizeof(char[MAXSTRING]));
 }
+
+struct environment *
+envlistalloc()
+{
+    return (struct environment *) malloc_mon(sizeof(struct environment[MAXENV]));
+}
+
+struct procedure *
+procalloc()
+{
+    return (struct procedure *) malloc_mon(sizeof(struct procedure));
+}

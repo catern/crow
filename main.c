@@ -80,18 +80,6 @@ lookup(struct environment *, struct node);
 struct environment *
 copy_environment_list(struct environment *);
 
-struct environment *
-envlistalloc()
-{
-    return (struct environment *) malloc_mon(sizeof(struct environment[MAXENV]));
-}
-
-struct procedure *
-procalloc()
-{
-    return (struct procedure *) malloc_mon(sizeof(struct procedure));
-}
-
 struct node *
 node_copy(struct node);
 

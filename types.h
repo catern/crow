@@ -66,3 +66,9 @@ tokenalloc();
 
 char *
 stralloc();
+
+struct environment *
+envlistalloc();
+
+struct procedure *
+procalloc();
