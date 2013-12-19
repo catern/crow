@@ -3,9 +3,6 @@
 #include <string.h>
 #include "types.h"
 
-struct node niller_node = { .type = NIL };
-
-
 char chbuf[MAXCHARBUF]; /* buffer for input chars */
 int bufp = 0; /* next free space in chbuf */
 
@@ -65,7 +62,8 @@ parse_token()
     if (c == ';') {
         while ((c = getch()) != '\n')
             ;
-        return niller_node;
+        curnode.type = NIL;
+        return curnode;
     }
     else if (c == '(') {
         struct node *list;
@@ -84,7 +82,8 @@ parse_token()
         return curnode;
     }
     else if (c == ')') {
-        return niller_node;
+        curnode.type = NIL;
+        return curnode;
     }
     else if (c == '\"') {
         int i = 0;
@@ -181,7 +180,9 @@ parse_token_ll()
         return topnode;
     }
     else if (c == ')') {
-        return &niller_node;
+        curnode = nalloc();
+        curnode->type = NIL;
+        return curnode;
     }
     else if (c == '\'') {
         topnode = curnode = nalloc();
@@ -197,15 +198,14 @@ parse_token_ll()
         curnode->pair = pairalloc();
         curnode->pair->car = nextnode;
         nextnode = nalloc();
-        if (nextnode->type = NIL)
-            return &niller_node;
         curnode->pair->cdr = nextnode;
         curnode = nextnode;
 
         curnode->type = PAIR;
         curnode->pair = pairalloc();
         curnode->pair->car = parse_token_ll();
-        curnode->pair->cdr = &niller_node;
+        curnode->pair->cdr = nalloc();
+        curnode->pair->cdr->type = NIL;
 
         return topnode;
     }
