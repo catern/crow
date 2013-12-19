@@ -363,7 +363,7 @@ node_copy(struct node oldnode)
                 strcpy(newnode->proc->symbols[i],oldnode.proc->symbols[i]);
             newnode->proc->nargs = oldnode.proc->nargs;
             // body
-            newnode->proc->body = *node_copy(oldnode.proc->body);
+            newnode->proc->body = node_copy(*oldnode.proc->body);
             break;
         case PAIR:
             newnode->pair = pairalloc();
@@ -847,7 +847,7 @@ apply_compound(struct node proc, struct node args[], int n)
 
     extend_envlist(proc.proc->env, varlist, i);
 
-    return eval(proc.proc->body, proc.proc->env);
+    return eval(*proc.proc->body, proc.proc->env);
 }
 
 struct node
@@ -861,7 +861,7 @@ create_procedure(char **arglist, int n, struct node body, struct environment *en
     envlist = env;
 
     proc.proc = procalloc();
-    proc.proc->body = body;
+    proc.proc->body = node_copy(body);
     proc.proc->nargs = n;
     for (i = 0; i < n; i++)
         strcpy(proc.proc->symbols[i],arglist[i]);

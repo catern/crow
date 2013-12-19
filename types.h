@@ -47,7 +47,7 @@ struct environment {
 
 struct procedure {
     char symbols[MAXTOKEN][MAXVAR];
-    struct node body;
+    struct node *body;
     struct environment *env;
     int nargs;
 };

@@ -76,7 +76,7 @@ print_node(struct node *expr)
             //printf("\n\033[1;37mBody:\033[0m \n");
             //print_node((*expr.proc).body);
             printf("\n\033[1;37mBody:\033[0m ");
-            minimal_print_node(&expr->proc->body);
+            minimal_print_node(expr->proc->body);
             printf("\n");
             break;
         case LIST:

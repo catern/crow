@@ -136,25 +136,25 @@ node_pointers(void *mlist[], struct node *expr, int mn)
 
     mlist[mn++] = expr;
 
-    switch ((*expr).type) {
+    switch (expr->type) {
         case LIST:
             // get the pointers from each node in the list
             // this will also include the list itself at list[0] (I think)
-            for (i=0; i < (*expr).nlist; i++) {
-                mn = node_pointers(mlist, &((*expr).list[i]), mn);
+            for (i=0; i < expr->nlist; i++) {
+                mn = node_pointers(mlist, &(expr->list[i]), mn);
             }
             break;
         case PROC:
-            mn = proc_pointers(mlist, ((*expr).proc), mn);
+            mn = proc_pointers(mlist, (expr->proc), mn);
             break;
         case NUMBER:
             // ain't no pointers here!
             break;
         case SYMBOL:
-            mlist[mn++] = (*expr).symbol;
+            mlist[mn++] = expr->symbol;
             break;
         case STRING:
-            mlist[mn++] = (*expr).string;
+            mlist[mn++] = expr->string;
             break;
         case PAIR:
             mlist[mn++] = expr->pair;
@@ -164,7 +164,7 @@ node_pointers(void *mlist[], struct node *expr, int mn)
         case NIL:
             break;
         default:
-            mlist[mn++] = (*expr).symbol;
+            mlist[mn++] = expr->symbol;
             printf("node_pointers: unknown type %d\n", expr->type);
     }
 
@@ -191,12 +191,12 @@ proc_pointers(void *mlist[], struct procedure *proc, int mn)
     mlist[mn++] = proc;
 
     // process the body of the proc
-    mn = node_pointers(mlist, &(*proc).body, mn);
+    mn = node_pointers(mlist, proc->body, mn);
     // process the env of the proc
-    mn = env_pointers(mlist, (*proc).env, mn);
+    mn = env_pointers(mlist, proc->env, mn);
     // process the args of the proc 
-    for (i=0; i < (*proc).nargs ; i++) {
-        mlist[mn++] = (*proc).symbols[i];
+    for (i=0; i < proc->nargs ; i++) {
+        mlist[mn++] = proc->symbols[i];
     }
         
 
