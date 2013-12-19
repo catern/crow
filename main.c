@@ -13,6 +13,7 @@
 #include "types.h"
 #include "gc.h"
 #include "printnode.h"
+#include "parser.h"
 
 // special nodes
 struct node nil_node = { .type = NIL };
@@ -23,242 +24,6 @@ struct node false_node = { .type = NUMBER, .number = 0 };
 struct variable undefinedvar;
 
 // end special nodes
-
-// reading input
-void
-file_eval(char *, struct environment *);
-
-int getch(void);
-void ungetch(int);
-
-char chbuf[MAXCHARBUF]; /* buffer for input chars */
-int bufp = 0; /* next free space in chbuf */
-
-char *readbuf; // buffer for reading chars
-int readbufp = 0;
-int readlength = 0;
-
-int getch()
-{
-    if (bufp > 0)
-        return (int) chbuf[--bufp];
-    else if (readbufp < readlength)
-        return (int) readbuf[readbufp++];
-    else
-        return getchar();
-}
-
-void ungetch(int c)
-{
-    if (bufp >= MAXCHARBUF)
-        printf("ungetch: char buffer overflow\n");
-    else
-        chbuf[bufp++] = c;
-}
-
-int gettoken(char *token)
-{
-    int c;
-
-    while ((c = getch()) == ' ' || c == '\t' || c == '\n' )
-        ;
-    if (c != '(' && c != ')' && c != '\'' && c != '\"' && c != ';') {
-        for (*token++ = c; !iswspace(c = getch()) && c != '(' && c != ')'; *token++ = c)
-            ;
-        *token = '\0';
-        ungetch(c); /* the token ended but we went one char too far */
-        return 0;
-    }
-    else
-        return c;
-}
-
-struct node
-parse_token()
-{
-    /* This is called parse_token, but it's the entirety of the parser.
-     * A list is just another kind of "token", defined by parentheses and
-     * some tokens within it.
-     * This parser recursively parses lists when a leftparen is seen,
-     * and ordinary tokens otherwise */
-    char token[MAXTOKEN];
-    int c;
-
-    struct node curnode;
-    
-    c = gettoken(token);
-    if (c == ';') {
-        while ((c = getch()) != '\n')
-            ;
-        return nil_node;
-    }
-    else if (c == '(') {
-        struct node *list;
-        list = nlistalloc();
-        int i;
-
-        i = 0;
-        while ((curnode = parse_token()).type != NIL) {
-            list[i] = curnode;
-            i++;
-        }
-
-        curnode.nlist = i;
-        curnode.type = LIST;
-        curnode.list = list;
-        return curnode;
-    }
-    else if (c == ')') {
-        return nil_node;
-    }
-    else if (c == '\"') {
-        int i = 0;
-        curnode.string = stralloc();        
-
-        while (((c = getch()) != EOF) && (c != '\"')) {
-            curnode.string[i] = c;
-            i++;
-        }
-        curnode.type = STRING;
-        curnode.string[i] = '\0';
-        return curnode;
-    }
-     else if (c == '\'') {
-        struct node *list;
-        list = nlistalloc();
-
-        char *quote;
-        quote = tokenalloc();
-        strcpy(quote, "quote");
-
-        curnode.type = SYMBOL;
-        curnode.symbol = quote;
-
-        list[0] = curnode;
-        list[1] = parse_token();
-
-        curnode.nlist = 2;
-        curnode.type = LIST;
-        curnode.list = list;
-        return curnode;
-    }
-    else if (((token[0] == '-' || token[0] == '.') && isdigit(token[1])) || isdigit(token[0])) {
-        /* next node will be a number */
-        double n;
-        n = strtod(token, NULL);
-
-        curnode.type = NUMBER;
-        curnode.number = n;
-        return curnode;
-    }
-    else {
-        /* next node will be a symbol */
-        char *symbol;
-        symbol = tokenalloc();
-        strcpy(symbol, token);
-
-        curnode.type = SYMBOL;
-        curnode.symbol = symbol;
-        return curnode;
-    }
-}
-
-struct node *
-parse_token_ll()
-{
-  // this parses tokens into linked lists (lists constructed from pairs) instead of array list types
-    char token[MAXTOKEN];
-    int c;
-
-    struct node *topnode;
-    struct node *curnode;
-    struct node *nextnode;
-    
-    c = gettoken(token);
-    if (c == '\"') {
-        int i = 0;
-        curnode = nalloc();
-        curnode->string = stralloc();        
-
-        while (((c = getch()) != EOF) && (c != '\"')) {
-            curnode->string[i] = c;
-            i++;
-        }
-        curnode->type = STRING;
-        curnode->string[i] = '\0';
-        return curnode;
-    }
-    else if (c == '(') {
-        int i;
-
-        topnode = curnode = nalloc();
-
-        i = 0;
-        while ((nextnode = parse_token_ll())->type != NIL) {
-            curnode->type = PAIR;
-            curnode->pair = pairalloc();
-            curnode->pair->car = nextnode;
-            curnode->pair->cdr = nalloc();
-            curnode = curnode->pair->cdr;
-            i++;
-        }
-        curnode->type = NIL;
-        return topnode;
-    }
-    else if (c == ')') {
-        return &nil_node;
-    }
-    else if (c == '\'') {
-        topnode = curnode = nalloc();
-
-        nextnode = nalloc();
-        char *quote;
-        quote = tokenalloc();
-        strcpy(quote, "quote");
-        nextnode->type = SYMBOL;
-        nextnode->symbol = quote;
-
-        curnode->type = PAIR;
-        curnode->pair = pairalloc();
-        curnode->pair->car = nextnode;
-        nextnode = nalloc();
-        if (nextnode->type = NIL)
-            return &nil_node;
-        curnode->pair->cdr = nextnode;
-        curnode = nextnode;
-
-        curnode->type = PAIR;
-        curnode->pair = pairalloc();
-        curnode->pair->car = parse_token_ll();
-        curnode->pair->cdr = &nil_node;
-
-        return topnode;
-    }
-    else if ((token[0] == '-' && isdigit(token[1])) || isdigit(token[0])) {
-        /* next node will be a number */
-        int n;
-        n = atof(token);
-
-        curnode = nalloc();
-        curnode->type = NUMBER;
-        curnode->number = n;
-        return curnode;
-    }
-    else {
-        /* next node will be a symbol */
-        char *symbol;
-        symbol = tokenalloc();
-        strcpy(symbol, token);
-
-        curnode = nalloc();
-        curnode->type = SYMBOL;
-        curnode->symbol = symbol;
-        return curnode;
-    }
-}
-
-
-/* READ STEP, COMPLETE! */
 
 /* EVAL STEP, BEGIN! */
 struct node
@@ -726,7 +491,7 @@ eval_load(struct node expr, struct environment *env)
     if (expr.list[1].type == STRING) {
         char* filename;
         filename = expr.list[1].string;
-        file_eval(filename, env);
+        eval(*parse_file(filename), env);
     }
     return nil_node;
 }
@@ -1078,30 +843,6 @@ read_list()
     return root;
 }
 
-void
-file_eval(char *filename, struct environment *env)
-{
-    FILE *readfile;
-    readfile = fopen(filename, "r");
-    if (readfile == NULL) {
-      printf("file_eval: not a valid file: %s\n", filename);
-    }
-    fseek(readfile, 0, SEEK_END);
-    long pos = ftell(readfile);
-    fseek(readfile, 0, SEEK_SET);
-    readbuf = malloc(pos);
-    fread(readbuf, pos, 1, readfile);
-    fclose(readfile);
-    readlength = pos - 1;
-
-    // parses and evals what is currently in the queue, throwing away the result
-    // ^ WHAT DOES THAT MEAN
-    while (readbufp < readlength) {
-      eval(parse_token(), env);
-    }
-    return;
-}
-
 main()
 {
     int c;
@@ -1115,7 +856,8 @@ main()
     struct variable nilvar = {"nil", &nil_node};
     bind_in_current_env(globalenv, nilvar);
 
-    file_eval("defaults.scm", globalenv);
+    // get our defaults
+    eval(*parse_file("defaults.scm"), globalenv);
 
     printf(">>");
     while ((c = getch()) != EOF) {
@@ -1126,7 +868,7 @@ main()
             // and get the root of the resulting s expression
             root = parse_token();
 
-            // print the unparsed s-exp
+            // print the unevaled s-exp
             //print_node(&root);
 
             // eval the s expression

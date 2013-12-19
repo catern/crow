@@ -7,7 +7,7 @@
 #define TRUE 1
 #define FALSE 0
 
-#define MAXLIST 20
+#define MAXLIST 50
 
 enum 
 // data types
