@@ -20,7 +20,7 @@ struct node {
     int type;
     char *symbol;
     double number;
-    struct node *list;
+    struct node **list;
     struct procedure *proc;
     struct pair *pair;
     int nlist;
@@ -58,7 +58,7 @@ pairalloc();
 struct node *
 nalloc();
 
-struct node *
+struct node **
 nlistalloc();
 
 char *

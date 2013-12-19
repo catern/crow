@@ -66,13 +66,14 @@ parse_token()
         return curnode;
     }
     else if (c == '(') {
-        struct node *list;
+        struct node **list;
         list = nlistalloc();
         int i;
 
         i = 0;
         while ((curnode = parse_token()).type != NIL) {
-            list[i] = curnode;
+            list[i] = nalloc();
+            *list[i] = curnode;
             i++;
         }
 
@@ -98,7 +99,7 @@ parse_token()
         return curnode;
     }
      else if (c == '\'') {
-        struct node *list;
+        struct node **list;
         list = nlistalloc();
 
         char *quote;
@@ -108,8 +109,10 @@ parse_token()
         curnode.type = SYMBOL;
         curnode.symbol = quote;
 
-        list[0] = curnode;
-        list[1] = parse_token();
+        list[0] = nalloc();
+        *list[0] = curnode;
+        list[1] = nalloc();
+        *list[1] = parse_token();
 
         curnode.nlist = 2;
         curnode.type = LIST;
@@ -252,15 +255,16 @@ parse_file(char *filename)
     struct node *root = nalloc();
     root->type = LIST;
     root->list = nlistalloc();
-    root->list[0] = *nalloc(); 
-    root->list[0].type = SYMBOL;
-    root->list[0].symbol = tokenalloc();
-    strcpy(root->list[0].symbol,"begin");
+    root->list[0] = nalloc(); 
+    root->list[0]->type = SYMBOL;
+    root->list[0]->symbol = tokenalloc();
+    strcpy(root->list[0]->symbol,"begin");
 
     int i = 1;
     // parses what is currently in the queue
     while (readbufp < readlength) {
-      root->list[i++] = parse_token();
+      root->list[i] = nalloc();
+      *(root->list[i++]) = parse_token();
     }
     root->nlist = i;
     return root;

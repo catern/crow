@@ -14,10 +14,12 @@ nalloc()
     return (struct node *) malloc_mon(sizeof(struct node));
 }
 
-struct node *
+struct node **
 nlistalloc()
 {
-    return (struct node *) malloc_mon(sizeof(struct node[MAXLIST]));
+    struct node **nlist = (struct node **) 
+      malloc_mon(sizeof(struct node*[MAXLIST]));
+    return nlist;
 }
 
 char *

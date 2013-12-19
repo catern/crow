@@ -138,10 +138,10 @@ node_pointers(void *mlist[], struct node *expr, int mn)
 
     switch (expr->type) {
         case LIST:
+            mlist[mn++] = expr->list;
             // get the pointers from each node in the list
-            // this will also include the list itself at list[0] (I think)
             for (i=0; i < expr->nlist; i++) {
-                mn = node_pointers(mlist, &(expr->list[i]), mn);
+                mn = node_pointers(mlist, expr->list[i], mn);
             }
             break;
         case PROC:

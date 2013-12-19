@@ -8,15 +8,15 @@ print_list(struct node *expr)
     int i;
     printf("(");
     for (i = 0; i < expr->nlist; i++) {
-        switch (expr->list[i].type) {
+        switch (expr->list[i]->type) {
             case LIST:
-                print_list(&expr->list[i]);
+                print_list(expr->list[i]);
                 break;
             case SYMBOL:
-                printf("%s ", expr->list[i].symbol);
+                printf("%s ", expr->list[i]->symbol);
                 break;
             case NUMBER:
-                printf("%f ", expr->list[i].number);
+                printf("%f ", expr->list[i]->number);
                 break;
         }
     }

@@ -33,10 +33,10 @@ struct node
 eval_setcdr(struct node, struct environment *);
 
 struct node
-apply(struct node, struct node *, int);
+apply(struct node, struct node **, int);
 
 struct node
-apply_prim(struct node, struct node *, int);
+apply_prim(struct node, struct node **, int);
 
 struct node
 create_procedure(char **, int, struct node, struct environment *);
@@ -94,8 +94,9 @@ node_copy(struct node oldnode)
     switch (oldnode.type) {
         case LIST:
             newnode->list = nlistalloc();
-            for (i=0; i < oldnode.nlist; i++)
-                newnode->list[i] = *node_copy(oldnode.list[i]);
+            for (i=0; i < oldnode.nlist; i++) {
+                newnode->list[i] = node_copy(*oldnode.list[i]);
+            }
             newnode->nlist = oldnode.nlist;
             break;
         case NUMBER:
@@ -288,7 +289,7 @@ eval(struct node expr, struct environment *env)
             return expr;
             break;
         case LIST:
-            switch (special_form(expr.list[0])) { 
+            switch (special_form(*expr.list[0])) { 
                 // special syntactic forms need special handling
                 // (i.e., forms where you can't simply eval all the arguments)
                 case IF:
@@ -341,8 +342,8 @@ struct node
 eval_setcar(struct node expr, struct environment *env)
 {
     struct variable *var;
-    var = lookup(env,expr.list[1]);
-    var->value->pair->car = node_copy(eval(expr.list[2], env));
+    var = lookup(env,*expr.list[1]);
+    var->value->pair->car = node_copy(eval(*expr.list[2], env));
     return nil_node;
 }
 
@@ -350,8 +351,8 @@ struct node
 eval_setcdr(struct node expr, struct environment *env)
 {
     struct variable *var;
-    var = lookup(env,expr.list[1]);
-    var->value->pair->cdr = node_copy(eval(expr.list[2], env));
+    var = lookup(env,*expr.list[1]);
+    var->value->pair->cdr = node_copy(eval(*expr.list[2], env));
     return nil_node;
 }
 
@@ -359,21 +360,22 @@ struct node
 eval_let(struct node expr, struct environment *env)
 {
     struct environment *newenv;
-    struct variable varlist[expr.list[1].nlist];
+    struct variable varlist[expr.list[1]->nlist];
     struct node body;
     newenv = copy_environment_list(env);
     int i;
 
-    for (i = 0; i < expr.list[1].nlist; i++) {
-        varlist[i].symbol = expr.list[1].list[i].list[0].symbol;
-        varlist[i].value = node_copy(eval(expr.list[1].list[i].list[1], env));
+    for (i = 0; i < expr.list[1]->nlist; i++) {
+        varlist[i].symbol = expr.list[1]->list[i]->list[0]->symbol;
+        varlist[i].value = node_copy(eval(*expr.list[1]->list[i]->list[1], env));
     }
 
     struct node *allocbody;
     extend_envlist(newenv, varlist, i);
-    expr.list[1].type = SYMBOL;
-    expr.list[1].symbol = tokenalloc();
-    strcpy(expr.list[1].symbol,"begin");
+    expr.list[1] = nalloc();
+    expr.list[1]->type = SYMBOL;
+    expr.list[1]->symbol = tokenalloc();
+    strcpy(expr.list[1]->symbol,"begin");
     body.type = LIST;
     body.list = (expr.list+1);
     body.nlist = expr.nlist-1;
@@ -389,10 +391,10 @@ eval_cond(struct node expr, struct environment *env)
 {
     int i;
     for (i = 1; i < expr.nlist; i++) {
-        if ((expr.list[i].list[0].type == SYMBOL && 
-                    !strcmp(expr.list[i].list[0].symbol,"else")) ||
-            istrue(expr.list[i].list[0], env)) {
-            return eval(expr.list[i].list[1], env);
+        if ((expr.list[i]->list[0]->type == SYMBOL && 
+                    !strcmp(expr.list[i]->list[0]->symbol,"else")) ||
+            istrue(*expr.list[i]->list[0], env)) {
+            return eval(*expr.list[i]->list[1], env);
         }
     }
 }
@@ -400,31 +402,31 @@ eval_cond(struct node expr, struct environment *env)
 struct node
 eval_quote(struct node expr, struct environment *env)
 {
-    return expr.list[1];
+    return *expr.list[1];
 }
 
 struct node
 eval_delay(struct node expr, struct environment *env)
 {
     char **empty;
-    return create_procedure(empty, 0, expr.list[1], env);
+    return create_procedure(empty, 0, *expr.list[1], env);
 }
 
 struct node
 eval_lambda(struct node expr, struct environment *env)
 {
-    char *arglist[expr.list[1].nlist];
+    char *arglist[expr.list[1]->nlist];
     int i, dot;
     struct node body;
     struct node proc;
 
     // copies the tokens from the list in the second position to another array
-    for (i = 0; i < expr.list[1].nlist; i++) {
+    for (i = 0; i < expr.list[1]->nlist; i++) {
         arglist[i] = (char *) malloc_mon(sizeof(char)*MAXTOKEN);
-        strcpy(arglist[i], expr.list[1].list[i].symbol);
+        strcpy(arglist[i], expr.list[1]->list[i]->symbol);
     }
 
-    body = expr.list[2];
+    body = *expr.list[2];
 
     proc = create_procedure(arglist, i, body, env);
     return proc;
@@ -437,22 +439,23 @@ eval_define(struct node expr, struct environment *env)
     struct node *varvalue;
     varvalue = nalloc();
 
-    if (expr.list[1].type == LIST) {
-        var.symbol = expr.list[1].list[0].symbol;
+    if (expr.list[1]->type == LIST) {
+        var.symbol = expr.list[1]->list[0]->symbol;
         var.value = varvalue; 
         bind_in_current_env(env, var);
 
         struct node body;
         char *arglist[MAXVAR];
         int i;
-        for (i = 1; i < expr.list[1].nlist; i++) {
-            arglist[(i-1)] = (char *) malloc_mon(sizeof(char)*MAXTOKEN);
-            strcpy(arglist[(i-1)], expr.list[1].list[i].symbol);
+        for (i = 1; i < expr.list[1]->nlist; i++) {
+          arglist[(i-1)] = tokenalloc();
+          strcpy(arglist[(i-1)], expr.list[1]->list[i]->symbol);
         }
         struct node *allocbody;
-        expr.list[1].type = SYMBOL;
-        expr.list[1].symbol = tokenalloc();
-        strcpy(expr.list[1].symbol,"begin");
+        expr.list[1] = nalloc();
+        expr.list[1]->type = SYMBOL;
+        expr.list[1]->symbol = tokenalloc();
+        strcpy(expr.list[1]->symbol,"begin");
         body.type = LIST;
         body.nlist = expr.nlist-1;
         body.list = expr.list+1;
@@ -464,11 +467,11 @@ eval_define(struct node expr, struct environment *env)
         (*varvalue) = create_procedure(arglist, (i - 1), *allocbody, env);
     }
     else {
-        var.symbol = expr.list[1].symbol;
+        var.symbol = expr.list[1]->symbol;
         var.value = varvalue; 
         bind_in_current_env(env, var);
 
-        (*varvalue) = eval(expr.list[2], env);
+        (*varvalue) = eval(*expr.list[2], env);
     }
     return (*varvalue);
 }
@@ -476,9 +479,9 @@ eval_define(struct node expr, struct environment *env)
 struct node
 eval_load(struct node expr, struct environment *env)
 {
-    if (expr.list[1].type == STRING) {
+    if (expr.list[1]->type == STRING) {
         char* filename;
-        filename = expr.list[1].string;
+        filename = expr.list[1]->string;
         eval(*parse_file(filename), env);
     }
     return nil_node;
@@ -514,22 +517,26 @@ node_equal(struct node n1, struct node n2)
 struct node
 eval_if(struct node expr, struct environment *env)
 {
-    if (istrue(expr.list[1], env))
-        return eval(expr.list[2], env);
+    if (istrue(*expr.list[1], env))
+        return eval(*expr.list[2], env);
     else
-        return eval(expr.list[3], env);
+        return eval(*expr.list[3], env);
 }
 
 struct node
 eval_application(struct node expr, struct environment *env)
 {
     struct node proc;
+    struct node cur;
     int i;
 
-    for (i = 0; i < expr.nlist; i++)
-        expr.list[i] = eval(expr.list[i], env);
+    for (i = 0; i < expr.nlist; i++) {
+        cur = eval(*expr.list[i], env);
+        expr.list[i] = nalloc();
+        *expr.list[i] = cur;
+    }
 
-    return apply(expr.list[0], (expr.list+1), (i-1));
+    return apply(*expr.list[0], (expr.list+1), (i-1));
 }
 
 struct node *
@@ -547,11 +554,11 @@ list_to_ll(struct node oldnode)
 
         curnode->pair = pairalloc();
         curnode->type = PAIR;
-        if (oldnode.list[i].type == LIST) {
-            curnode->pair->car = list_to_ll(oldnode.list[i]);
+        if (oldnode.list[i]->type == LIST) {
+            curnode->pair->car = list_to_ll(*oldnode.list[i]);
         }
         else
-            curnode->pair->car = node_copy(oldnode.list[i]);
+            curnode->pair->car = node_copy(*oldnode.list[i]);
         curnode->pair->cdr = nextnode;
     }
     nextnode->type = NIL;
@@ -559,7 +566,7 @@ list_to_ll(struct node oldnode)
 }
 
 struct node
-apply_compound(struct node proc, struct node args[], int n)
+apply_compound(struct node proc, struct node *args[], int n)
 {
     int i, dot;
     struct variable varlist[proc.proc->nargs];
@@ -571,7 +578,7 @@ apply_compound(struct node proc, struct node args[], int n)
             break;
         }
         varlist[i].symbol = proc.proc->symbols[i];
-        varlist[i].value = node_copy(args[i]);
+        varlist[i].value = node_copy(*args[i]);
     }
     if (dot == 1) {
         struct node restargs;
@@ -608,7 +615,7 @@ create_procedure(char **arglist, int n, struct node body, struct environment *en
 }
 
 struct node
-apply(struct node proc, struct node *args, int n)
+apply(struct node proc, struct node **args, int n)
 {
     struct node result;
     if (primitive_proc(proc)) {
@@ -620,7 +627,7 @@ apply(struct node proc, struct node *args, int n)
 }
 
 struct node
-apply_prim(struct node proc, struct node args[], int n)
+apply_prim(struct node proc, struct node *args[], int n)
 {
     int i;
     double total;
@@ -630,94 +637,94 @@ apply_prim(struct node proc, struct node args[], int n)
 
     if (proc.symbol[0] == '+') {
         for (i = 0; i < n; i++)
-            total += args[i].number;
+            total += args[i]->number;
         result.type = NUMBER;
         result.number = total;
     }
     else if (proc.symbol[0] == '-') {
-        total = args[0].number;
+        total = args[0]->number;
         for (i = 1; i < n; i++)
-            total = total - args[i].number;
+            total = total - args[i]->number;
         result.type = NUMBER;
         result.number = total;
     }
     else if (proc.symbol[0] == '*') {
         total = 1;
         for (i = 0; i < n; i++)
-            total = total * args[i].number;
+            total = total * args[i]->number;
         result.type = NUMBER;
         result.number = total;
     }
     else if (proc.symbol[0] == '/') {
-        total = args[0].number / args[1].number;
+        total = args[0]->number / args[1]->number;
         result.type = NUMBER;
         result.number = total;
     }
     else if (proc.symbol[0] == '=') {
-        int temp = args[0].number;
+        int temp = args[0]->number;
         total = 1;
         for (i = 0; i < n; i++)
-            total = total && (temp == args[i].number);
+            total = total && (temp == args[i]->number);
         result.type = NUMBER;
         result.number = total;
     }
     else if (proc.symbol[0] == '<') {
-        if (args[0].number < args[1].number)
+        if (args[0]->number < args[1]->number)
             return true_node;
         else
             return false_node;
     }
     else if (proc.symbol[0] == '>') {
-        if (args[0].number > args[1].number)
+        if (args[0]->number > args[1]->number)
             return true_node;
         else
             return false_node;
     }
     else if (!strcmp(proc.symbol,"abs")) {
-        total = fabs(args[0].number);
+        total = fabs(args[0]->number);
         result.type = NUMBER;
         result.number = total;
     }
     else if (!strcmp(proc.symbol,"cons")) {
         struct pair *newpair;
         newpair = pairalloc();
-        newpair->car = &args[0];
-        newpair->cdr = &args[1];
+        newpair->car = args[0];
+        newpair->cdr = args[1];
         result.type = PAIR;
         result.pair = newpair;
     }
     else if (!strcmp(proc.symbol,"car")) {
-        return *args[0].pair->car;
+        return *args[0]->pair->car;
     }
     else if (!strcmp(proc.symbol,"cdr")) {
-        return *args[0].pair->cdr;
+        return *args[0]->pair->cdr;
     }
     else if (!strcmp(proc.symbol,"null?")) {
-        if (args[0].type == NIL)
+        if (args[0]->type == NIL)
             return true_node;
         else
             return false_node;
     }
     else if (!strcmp(proc.symbol,"number?")) {
-        if (args[0].type == NUMBER)
+        if (args[0]->type == NUMBER)
             return true_node;
         else
             return false_node;
     }
     else if (!strcmp(proc.symbol,"string?")) {
-        if (args[0].type == STRING)
+        if (args[0]->type == STRING)
             return true_node;
         else
             return false_node;
     }
     else if (!strcmp(proc.symbol,"symbol?")) {
-        if (args[0].type == SYMBOL)
+        if (args[0]->type == SYMBOL)
             return true_node;
         else
             return false_node;
     }
     else if (!strcmp(proc.symbol,"pair?")) {
-        if (args[0].type == PAIR)
+        if (args[0]->type == PAIR)
             return true_node;
         else
             return false_node;
@@ -728,27 +735,27 @@ apply_prim(struct node proc, struct node args[], int n)
     }
     else if (!strcmp(proc.symbol,"eq?")) {
         result.type = NUMBER;
-        result.number = node_equal(args[0], args[1]);
+        result.number = node_equal(*args[0], *args[1]);
     }
     else if (!strcmp(proc.symbol,"display")) {
-        if (args[0].type == SYMBOL) {
-            if (!strcmp(args[0].symbol, "\\n"))
+        if (args[0]->type == SYMBOL) {
+            if (!strcmp(args[0]->symbol, "\\n"))
                 printf("\n");
         }
         else 
-            minimal_print_node(&args[0]);
+            minimal_print_node(args[0]);
             
         result.type = NIL;
         return result;
     }
     else if (!strcmp(proc.symbol,"begin")) {
-        return args[n-1];
+        return *args[n-1];
     }
     else if (!strcmp(proc.symbol,"apply")) {
-        return apply(args[0],(args+1),(n-1));
+        return apply(*args[0],(args+1),(n-1));
     }
     else if (!strcmp(proc.symbol,"listconv")) {
-        return *list_to_ll(args[0]);
+        return *list_to_ll(*args[0]);
     }
      return result;
 }
