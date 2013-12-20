@@ -31,13 +31,13 @@ apply_prim(struct node *, struct node **, int);
 struct node *
 create_procedure(char **, int, struct node *, struct environment **);
 
-struct node
+struct node *
 eval_if(struct node *, struct environment **);
 
-struct node
+struct node *
 eval_cond(struct node *, struct environment **);
 
-struct node
+struct node *
 eval_let(struct node *, struct environment **);
 
 struct node *
@@ -265,7 +265,7 @@ special_form(struct node *expr)
 }
 
 
-struct node
+struct node *
 eval(struct node *expr, struct environment **env)
 {
     switch (expr->type) {
@@ -273,10 +273,10 @@ eval(struct node *expr, struct environment **env)
         case PAIR:
         case STRING:
         case NIL:
-            return *expr;
+            return expr;
             break;
         case DELAY: // this is specially not evaluated until forced
-            return *expr;
+            return expr;
             break;
         case LIST:
             switch (special_form(expr->list[0])) { 
@@ -289,39 +289,38 @@ eval(struct node *expr, struct environment **env)
                     return eval_cond(expr, env);
                     break;
                 case DEFINE:
-                    return *eval_define(expr, env);
+                    return eval_define(expr, env);
                     break;
                 case LAMBDA:
-                    return *eval_lambda(expr, env);
+                    return eval_lambda(expr, env);
                     break;
                 case DELAY:
-                    return *eval_delay(expr, env);
+                    return eval_delay(expr, env);
                     break;
                 case QUOTE:
-                    return *eval_quote(expr, env);
+                    return eval_quote(expr, env);
                     break;
                 case LET:
                     return eval_let(expr, env);
                     break;
                 case SETCAR:
-                    return *eval_setcar(expr, env);
+                    return eval_setcar(expr, env);
                     break;
                 case SETCDR:
-                    return *eval_setcdr(expr, env);
+                    return eval_setcdr(expr, env);
                     break;
                 case LOAD:
-                    return *eval_load(expr, env);
+                    return eval_load(expr, env);
                     break;
                 default:
-                    return *eval_application(expr, env);
+                    return eval_application(expr, env);
             }
             break;
         case SYMBOL:
-          // both of these can be a good place TODO next
             if (primitive_proc(expr))
-                return *expr;
+                return expr;
             else {
-                return *lookup_value(env, expr);
+                return lookup_value(env, expr);
             }
             break;
         default:
@@ -334,8 +333,7 @@ eval_setcar(struct node *expr, struct environment **env)
 {
     struct variable *var = lookup(expr->list[1]->symbol,env);
 
-    struct node newcar = eval(expr->list[2], env);
-    var->value->pair->car = node_copy(&newcar);
+    var->value->pair->car = eval(expr->list[2], env);
 
     struct node *result = nalloc();
     result->type = NIL;
@@ -347,15 +345,14 @@ eval_setcdr(struct node *expr, struct environment **env)
 {
     struct variable *var = lookup(expr->list[1]->symbol,env);
 
-    struct node newcdr = eval(expr->list[2], env);
-    var->value->pair->cdr = node_copy(&newcdr);
+    var->value->pair->cdr = eval(expr->list[2], env);
 
     struct node *result = nalloc();
     result->type = NIL;
     return result;
 }
 
-struct node
+struct node *
 eval_let(struct node *expr, struct environment **env)
 {
     int i;
@@ -366,9 +363,7 @@ eval_let(struct node *expr, struct environment **env)
         varlist[i] = varalloc();
 
         varlist[i]->symbol = expr->list[1]->list[i]->list[0]->symbol;
-
-        cur = eval(expr->list[1]->list[i]->list[1], env);
-        varlist[i]->value = node_copy(&cur);
+        varlist[i]->value = eval(expr->list[1]->list[i]->list[1], env);
     }
     extend_envlist(newenv, varlist, i);
 
@@ -391,7 +386,7 @@ eval_let(struct node *expr, struct environment **env)
     return eval(body, newenv);
 }
 
-struct node
+struct node *
 eval_cond(struct node *expr, struct environment **env)
 {
     int i;
@@ -466,9 +461,8 @@ eval_define(struct node *expr, struct environment **env)
         /* bind_in_current_env(varvalue->proc->env, name, varvalue); */
     }
     else {
-        varvalue = nalloc();
         name = expr->list[1]->symbol;
-        *varvalue = eval(expr->list[2], env);
+        varvalue = eval(expr->list[2], env);
     }
     bind_in_current_env(env, name, varvalue);
     return varvalue;
@@ -490,9 +484,9 @@ eval_load(struct node *expr, struct environment **env)
 int
 istrue(struct node *expr, struct environment **env)
 {
-    struct node val = eval(expr, env);
+    struct node *val = eval(expr, env);
 
-    if (val.type == NUMBER && val.number == 0)
+    if (val->type == NUMBER && val->number == 0)
         return 0;
     else
         return 1;
@@ -514,7 +508,7 @@ node_equal(struct node n1, struct node n2)
     return 0;
 }
 
-struct node
+struct node *
 eval_if(struct node *expr, struct environment **env)
 {
     if (istrue(expr->list[1], env))
@@ -531,9 +525,7 @@ eval_application(struct node *expr, struct environment **env)
     int i;
 
     for (i = 0; i < expr->nlist; i++) {
-        cur = nalloc();
-        *cur = eval(expr->list[i], env);
-        expr->list[i] = cur;
+        expr->list[i] = eval(expr->list[i], env);
     }
 
     return apply(expr->list[0], (expr->list+1), (i-1));
@@ -565,7 +557,7 @@ list_to_ll(struct node *oldnode)
     return topnode;
 }
 
-struct node
+struct node *
 apply_compound(struct node *proc, struct node *args[], int n)
 {
     int i, dot;
@@ -630,8 +622,7 @@ apply(struct node *proc, struct node **args, int n)
     }
     else
       {
-        result = nalloc();
-        *result = apply_compound(proc, args, n);
+        result = apply_compound(proc, args, n);
       }
     return result;
 }
@@ -892,8 +883,6 @@ read_list()
 main()
 {
     int c;
-    struct node *root;
-    struct node result;
 
     // the global environment
     struct environment **globalenv = envlistalloc();
@@ -914,18 +903,21 @@ main()
         if (!iswspace(c)) {
             ungetch(c);
 
-            // parse our input
-            // and get the root of the resulting s expression
-            root = parse_token();
+            /* // parse our input */
+            /* // and get the root of the resulting s expression */
+            /* struct node *root = parse_token(); */
 
-            // print the unevaled s-exp
-            //print_node(root);
+            /* // print the unevaled s-exp */
+            /* //print_node(root); */
 
-            // eval the s expression
-            result = eval(root, globalenv);
+            /* // eval the s expression */
+            /* struct node *result = eval(root, globalenv); */
 
-            // print the resulting s expression
-            print_node(&result);
+            /* // print the resulting s expression */
+            /* print_node(result); */
+            
+            // do it all
+            print_node(eval(parse_token(), globalenv));
 
             // free pointers that cannot be accessed
             garbage_collect(globalenv);
