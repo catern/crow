@@ -1,6 +1,7 @@
 /* insert GPLv3+ here */
 /* TODO: 
    strip out nil_node, true_node, false_node and undefined_var
+   gliiiiiiiiiiib
    switch to union types
    switch to passing pointers around
 //TODO: switch to passing pointers around instead of structs
@@ -17,9 +18,6 @@
 
 // special nodes
 struct node nil_node = { .type = NIL };
-
-struct node true_node = { .type = NUMBER, .number = 1 };
-struct node false_node = { .type = NUMBER, .number = 0 };
 
 struct variable undefinedvar;
 
@@ -637,10 +635,12 @@ apply_prim(struct node *proc, struct node *args[], int n)
     struct node *result = nalloc();
     result->type = NIL;
     total = 0;
+      // should free(result) in a bunch of these
 
     if (proc->symbol[0] == '+') {
-        for (i = 0; i < n; i++)
+        for (i = 0; i < n; i++) {
             total += args[i]->number;
+        }
         result->type = NUMBER;
         result->number = total;
     }
@@ -673,15 +673,27 @@ apply_prim(struct node *proc, struct node *args[], int n)
     }
     else if (proc->symbol[0] == '<') {
         if (args[0]->number < args[1]->number)
-            return true_node;
-        else
-            return false_node;
+          {
+            result->type = NUMBER;
+            result->number = 1;
+          }
+        else 
+          {
+            result->type = NUMBER;
+            result->number = 0;
+          }
     }
     else if (proc->symbol[0] == '>') {
         if (args[0]->number > args[1]->number)
-            return true_node;
-        else
-            return false_node;
+          {
+            result->type = NUMBER;
+            result->number = 1;
+          }
+        else 
+          {
+            result->type = NUMBER;
+            result->number = 0;
+          }
     }
     else if (!strcmp(proc->symbol,"abs")) {
         total = fabs(args[0]->number);
@@ -704,33 +716,63 @@ apply_prim(struct node *proc, struct node *args[], int n)
     }
     else if (!strcmp(proc->symbol,"null?")) {
         if (args[0]->type == NIL)
-            return true_node;
-        else
-            return false_node;
+          {
+            result->type = NUMBER;
+            result->number = 1;
+          }
+        else 
+          {
+            result->type = NUMBER;
+            result->number = 0;
+          }
     }
     else if (!strcmp(proc->symbol,"number?")) {
         if (args[0]->type == NUMBER)
-            return true_node;
-        else
-            return false_node;
+          {
+            result->type = NUMBER;
+            result->number = 1;
+          }
+        else 
+          {
+            result->type = NUMBER;
+            result->number = 0;
+          }
     }
     else if (!strcmp(proc->symbol,"string?")) {
         if (args[0]->type == STRING)
-            return true_node;
-        else
-            return false_node;
+          {
+            result->type = NUMBER;
+            result->number = 1;
+          }
+        else 
+          {
+            result->type = NUMBER;
+            result->number = 0;
+          }
     }
     else if (!strcmp(proc->symbol,"symbol?")) {
         if (args[0]->type == SYMBOL)
-            return true_node;
-        else
-            return false_node;
+          {
+            result->type = NUMBER;
+            result->number = 1;
+          }
+        else 
+          {
+            result->type = NUMBER;
+            result->number = 0;
+          }
     }
     else if (!strcmp(proc->symbol,"pair?")) {
         if (args[0]->type == PAIR)
-            return true_node;
-        else
-            return false_node;
+          {
+            result->type = NUMBER;
+            result->number = 1;
+          }
+        else 
+          {
+            result->type = NUMBER;
+            result->number = 0;
+          }
     }
     else if (!strcmp(proc->symbol,"read")) {
         result = read_list();
@@ -820,7 +862,6 @@ read_list()
 {
     int c;
     struct node *root;
-    struct node result;
 
     printf("!>> ");
     c = getch(); //remove newline that led us here
@@ -832,7 +873,7 @@ read_list()
         if (!iswspace(c)) {
             ungetch(c);
             root = parse_token_ll();
-            //print_node(&root);
+            //print_node(root);
         }
     } 
     ungetch('\n');
