@@ -48,7 +48,7 @@ struct node
 eval_cond(struct node *, struct environment *);
 
 struct node
-eval_let(struct node, struct environment *);
+eval_let(struct node *, struct environment *);
 
 struct node
 read_list(void);
@@ -311,7 +311,7 @@ eval(struct node *expr, struct environment *env)
                     return eval_quote(expr, env);
                     break;
                 case LET:
-                    return eval_let(*expr, env);
+                    return eval_let(expr, env);
                     break;
                 case SETCAR:
                     return eval_setcar(expr, env);
@@ -357,28 +357,28 @@ eval_setcdr(struct node *expr, struct environment *env)
 }
 
 struct node
-eval_let(struct node expr, struct environment *env)
+eval_let(struct node *expr, struct environment *env)
 {
     struct environment *newenv;
-    struct variable varlist[expr.list[1]->nlist];
+    struct variable varlist[expr->list[1]->nlist];
     struct node body;
     newenv = copy_environment_list(env);
     int i;
 
-    for (i = 0; i < expr.list[1]->nlist; i++) {
-        varlist[i].symbol = expr.list[1]->list[i]->list[0]->symbol;
-        varlist[i].value = node_copy(eval(expr.list[1]->list[i]->list[1], env));
+    for (i = 0; i < expr->list[1]->nlist; i++) {
+        varlist[i].symbol = expr->list[1]->list[i]->list[0]->symbol;
+        varlist[i].value = node_copy(eval(expr->list[1]->list[i]->list[1], env));
     }
 
     struct node *allocbody;
     extend_envlist(newenv, varlist, i);
-    expr.list[1] = nalloc();
-    expr.list[1]->type = SYMBOL;
-    expr.list[1]->symbol = tokenalloc();
-    strcpy(expr.list[1]->symbol,"begin");
+    expr->list[1] = nalloc();
+    expr->list[1]->type = SYMBOL;
+    expr->list[1]->symbol = tokenalloc();
+    strcpy(expr->list[1]->symbol,"begin");
     body.type = LIST;
-    body.list = (expr.list+1);
-    body.nlist = expr.nlist-1;
+    body.list = (expr->list+1);
+    body.nlist = expr->nlist-1;
     allocbody = node_copy(body);
     // body.list will get gc'd if we don't copy it, since it isn't 
     // actually allocated, it's an allocated_pointer+1
