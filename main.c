@@ -229,15 +229,15 @@ lookup(struct environment *envlist, struct node expr)
 }
 
 struct node
-lookup_value(struct environment *envlist, struct node expr)
+lookup_value(struct environment *envlist, struct node *expr)
 {
     struct variable *var;
-    var = lookup(envlist, expr);
+    var = lookup(envlist, *expr);
     if (var != &undefinedvar)
         return *node_copy(*var->value);
     else
         return nil_node;
-        printf("lookup_value: looked up a nonexistent variable: %s\n", expr.symbol);
+        printf("lookup_value: looked up a nonexistent variable: %s\n", expr->symbol);
 }
 
 
@@ -327,10 +327,10 @@ eval(struct node *expr, struct environment *env)
             }
             break;
         case SYMBOL:
-            if (primitive_proc(*expr))
+            if (primitive_proc(expr))
                 return *expr;
             else {
-                return lookup_value(env, *expr);
+                return lookup_value(env, expr);
             }
             break;
         default:
@@ -617,7 +617,7 @@ struct node
 apply(struct node proc, struct node **args, int n)
 {
     struct node result;
-    if (primitive_proc(proc)) {
+    if (primitive_proc(&proc)) {
         result = apply_prim(proc, args, n);
         return result;
     }
@@ -759,52 +759,52 @@ apply_prim(struct node proc, struct node *args[], int n)
      return result;
 }
 
-primitive_proc(struct node proc)
+primitive_proc(struct node *proc)
 {
-    if (proc.type == SYMBOL) {
-        if (proc.symbol[0] == '+')
+    if (proc->type == SYMBOL) {
+        if (proc->symbol[0] == '+')
             return 1;
-        else if (proc.symbol[0] == '-')
+        else if (proc->symbol[0] == '-')
             return 1;
-        else if (proc.symbol[0] == '*')
+        else if (proc->symbol[0] == '*')
             return 1;
-        else if (proc.symbol[0] == '/')
+        else if (proc->symbol[0] == '/')
             return 1;
-        else if (proc.symbol[0] == '=')
+        else if (proc->symbol[0] == '=')
             return 1;
-        else if (proc.symbol[0] == '>')
+        else if (proc->symbol[0] == '>')
             return 1;
-        else if (proc.symbol[0] == '<')
+        else if (proc->symbol[0] == '<')
             return 1;
-        else if (!strcmp(proc.symbol,"abs"))
+        else if (!strcmp(proc->symbol,"abs"))
             return 1;
-        else if (!strcmp(proc.symbol,"cons"))
+        else if (!strcmp(proc->symbol,"cons"))
             return 1;
-        else if (!strcmp(proc.symbol,"car"))
+        else if (!strcmp(proc->symbol,"car"))
             return 1;
-        else if (!strcmp(proc.symbol,"cdr"))
+        else if (!strcmp(proc->symbol,"cdr"))
             return 1;
-        else if (!strcmp(proc.symbol,"null?"))
+        else if (!strcmp(proc->symbol,"null?"))
             return 1;
-        else if (!strcmp(proc.symbol,"number?"))
+        else if (!strcmp(proc->symbol,"number?"))
             return 1;
-        else if (!strcmp(proc.symbol,"symbol?"))
+        else if (!strcmp(proc->symbol,"symbol?"))
             return 1;
-        else if (!strcmp(proc.symbol,"string?"))
+        else if (!strcmp(proc->symbol,"string?"))
             return 1;
-        else if (!strcmp(proc.symbol,"pair?"))
+        else if (!strcmp(proc->symbol,"pair?"))
             return 1;
-        else if (!strcmp(proc.symbol,"eq?"))
+        else if (!strcmp(proc->symbol,"eq?"))
             return 1;
-        else if (!strcmp(proc.symbol,"read"))
+        else if (!strcmp(proc->symbol,"read"))
             return 1;
-        else if (!strcmp(proc.symbol,"display"))
+        else if (!strcmp(proc->symbol,"display"))
             return 1;
-        else if (!strcmp(proc.symbol,"begin"))
+        else if (!strcmp(proc->symbol,"begin"))
             return 1;
-        else if (!strcmp(proc.symbol,"apply"))
+        else if (!strcmp(proc->symbol,"apply"))
             return 1;
-        else if (!strcmp(proc.symbol,"listconv"))
+        else if (!strcmp(proc->symbol,"listconv"))
             return 1;
         else
             return 0;
