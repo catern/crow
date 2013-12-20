@@ -52,9 +52,6 @@ eval_lambda(struct node *, struct environment **);
 struct node *
 eval_delay(struct node *, struct environment **);
 
-struct node
-eval_force(struct node, struct environment **);
-
 struct node *
 eval_quote(struct node *, struct environment **);
 
@@ -105,8 +102,9 @@ node_copy(struct node *oldnode)
             // env
             newnode->proc->env = copy_environment_list(oldnode->proc->env);
             // args
-            for (i = 0; i < oldnode->proc->nargs; i++)
+            for (i = 0; i < oldnode->proc->nargs; i++) {
                 strcpy(newnode->proc->symbols[i],oldnode->proc->symbols[i]);
+            }
             newnode->proc->nargs = oldnode->proc->nargs;
             // body
             newnode->proc->body = node_copy(oldnode->proc->body);
@@ -138,8 +136,7 @@ extend_envlist(struct environment **envlist, struct variable **varlist, int n)
 
     // setup the new env
     for (i=0; i < n; i++) {
-        newenv->vars[i] = varalloc();
-        *newenv->vars[i] = *varlist[i];
+        newenv->vars[i] = varlist[i];
     }
 
     //find the end of the envlist
@@ -155,9 +152,11 @@ copy_environment_list(struct environment **oldenv)
     int i, j;
     struct environment **newenv;
     newenv = envlistalloc();
+
     for (i = 0; oldenv[i] != NULL; i++) {
         newenv[i] = envalloc();
         newenv[i]->vars = varlistalloc();
+
         for (j=0; oldenv[i]->vars[j] != NULL; j++) { 
             newenv[i]->vars[j] = varalloc();
             newenv[i]->vars[j]->symbol = oldenv[i]->vars[j]->symbol;
@@ -356,32 +355,34 @@ struct node *
 eval_let(struct node *expr, struct environment **env)
 {
     int i;
+    // create variables defined by let
     struct variable *varlist[expr->list[1]->nlist];
-    struct environment **newenv = copy_environment_list(env);
-    struct node cur;
     for (i = 0; i < expr->list[1]->nlist; i++) {
         varlist[i] = varalloc();
-
         varlist[i]->symbol = expr->list[1]->list[i]->list[0]->symbol;
         varlist[i]->value = eval(expr->list[1]->list[i]->list[1], env);
     }
+    // create new environment with this bindings
+    struct environment **newenv = copy_environment_list(env);
     extend_envlist(newenv, varlist, i);
 
+    // create node to represent the expressions in the rest of the let
+    struct node *body = nalloc();
+    body->type = LIST;
+    body->list = nlistalloc();
+
+    // create begin node to put at the beginning of list
     struct node *begin = nalloc();
     begin->type = SYMBOL;
     begin->symbol = tokenalloc();
     strcpy(begin->symbol,"begin");
+    body->list[0] = begin; 
 
-    expr->list[1] = begin; 
-
-    struct node *body = nalloc();
-    body->type = LIST;
-    body->list = (expr->list+1);
-    body->nlist = expr->nlist-1;
-
-    body = node_copy(body);
-    // body->list will get gc'd if we don't copy it, since it isn't 
-    // actually allocated, it's an allocated_pointer+1
+    // rest of list is the expressions from the let
+    for (i = 1; i+1 < expr->nlist; i++) {
+        body->list[i] = expr->list[i+1];
+    }
+    body->nlist = 1 + (expr->nlist - 2);
 
     return eval(body, newenv);
 }
@@ -520,10 +521,7 @@ eval_if(struct node *expr, struct environment **env)
 struct node *
 eval_application(struct node *expr, struct environment **env)
 {
-    struct node proc;
-    struct node *cur;
     int i;
-
     for (i = 0; i < expr->nlist; i++) {
         expr->list[i] = eval(expr->list[i], env);
     }
