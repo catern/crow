@@ -57,7 +57,7 @@ struct node
 eval_define(struct node, struct environment *);
 
 struct node
-eval_lambda(struct node, struct environment *);
+eval_lambda(struct node *, struct environment *);
 
 struct node
 eval_delay(struct node *, struct environment *);
@@ -302,7 +302,7 @@ eval(struct node *expr, struct environment *env)
                     return eval_define(*expr, env);
                     break;
                 case LAMBDA:
-                    return eval_lambda(*expr, env);
+                    return eval_lambda(expr, env);
                     break;
                 case DELAY:
                     return eval_delay(expr, env);
@@ -412,20 +412,20 @@ eval_delay(struct node *expr, struct environment *env)
 }
 
 struct node
-eval_lambda(struct node expr, struct environment *env)
+eval_lambda(struct node *expr, struct environment *env)
 {
-    char *arglist[expr.list[1]->nlist];
+    char *arglist[expr->list[1]->nlist];
     int i, dot;
     struct node body;
     struct node proc;
 
     // copies the tokens from the list in the second position to another array
-    for (i = 0; i < expr.list[1]->nlist; i++) {
-        arglist[i] = (char *) malloc_mon(sizeof(char)*MAXTOKEN);
-        strcpy(arglist[i], expr.list[1]->list[i]->symbol);
+    for (i = 0; i < expr->list[1]->nlist; i++) {
+        arglist[i] = tokenalloc();
+        strcpy(arglist[i], expr->list[1]->list[i]->symbol);
     }
 
-    body = *expr.list[2];
+    body = *expr->list[2];
 
     proc = create_procedure(arglist, i, body, env);
     return proc;
