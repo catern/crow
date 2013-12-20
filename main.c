@@ -36,7 +36,7 @@ struct node
 apply(struct node *, struct node **, int);
 
 struct node
-apply_prim(struct node, struct node **, int);
+apply_prim(struct node *, struct node **, int);
 
 struct node
 create_procedure(char **, int, struct node, struct environment *);
@@ -566,32 +566,32 @@ list_to_ll(struct node oldnode)
 }
 
 struct node
-apply_compound(struct node proc, struct node *args[], int n)
+apply_compound(struct node *proc, struct node *args[], int n)
 {
     int i, dot;
-    struct variable varlist[proc.proc->nargs];
+    struct variable varlist[proc->proc->nargs];
 
     dot = 0;
-    for (i = 0; i < proc.proc->nargs; i++) {
-        if (proc.proc->symbols[i][0] == '.') {
+    for (i = 0; i < proc->proc->nargs; i++) {
+        if (proc->proc->symbols[i][0] == '.') {
             dot = 1;
             break;
         }
-        varlist[i].symbol = proc.proc->symbols[i];
+        varlist[i].symbol = proc->proc->symbols[i];
         varlist[i].value = node_copy(*args[i]);
     }
     if (dot == 1) {
         struct node restargs;
         restargs.list = args+i;
         restargs.nlist = n-i;
-        varlist[i].symbol = proc.proc->symbols[(i+1)];
+        varlist[i].symbol = proc->proc->symbols[(i+1)];
         varlist[i].value = list_to_ll(restargs);
         i++;
     }
 
-    extend_envlist(proc.proc->env, varlist, i);
+    extend_envlist(proc->proc->env, varlist, i);
 
-    return eval(proc.proc->body, proc.proc->env);
+    return eval(proc->proc->body, proc->proc->env);
 }
 
 struct node
@@ -619,15 +619,15 @@ apply(struct node *proc, struct node **args, int n)
 {
     struct node result;
     if (primitive_proc(proc)) {
-        result = apply_prim(*proc, args, n);
+        result = apply_prim(proc, args, n);
         return result;
     }
     else
-        return apply_compound(*proc, args, n);
+        return apply_compound(proc, args, n);
 }
 
 struct node
-apply_prim(struct node proc, struct node *args[], int n)
+apply_prim(struct node *proc, struct node *args[], int n)
 {
     int i;
     double total;
@@ -635,32 +635,32 @@ apply_prim(struct node proc, struct node *args[], int n)
     result.type = NIL;
     total = 0;
 
-    if (proc.symbol[0] == '+') {
+    if (proc->symbol[0] == '+') {
         for (i = 0; i < n; i++)
             total += args[i]->number;
         result.type = NUMBER;
         result.number = total;
     }
-    else if (proc.symbol[0] == '-') {
+    else if (proc->symbol[0] == '-') {
         total = args[0]->number;
         for (i = 1; i < n; i++)
             total = total - args[i]->number;
         result.type = NUMBER;
         result.number = total;
     }
-    else if (proc.symbol[0] == '*') {
+    else if (proc->symbol[0] == '*') {
         total = 1;
         for (i = 0; i < n; i++)
             total = total * args[i]->number;
         result.type = NUMBER;
         result.number = total;
     }
-    else if (proc.symbol[0] == '/') {
+    else if (proc->symbol[0] == '/') {
         total = args[0]->number / args[1]->number;
         result.type = NUMBER;
         result.number = total;
     }
-    else if (proc.symbol[0] == '=') {
+    else if (proc->symbol[0] == '=') {
         int temp = args[0]->number;
         total = 1;
         for (i = 0; i < n; i++)
@@ -668,24 +668,24 @@ apply_prim(struct node proc, struct node *args[], int n)
         result.type = NUMBER;
         result.number = total;
     }
-    else if (proc.symbol[0] == '<') {
+    else if (proc->symbol[0] == '<') {
         if (args[0]->number < args[1]->number)
             return true_node;
         else
             return false_node;
     }
-    else if (proc.symbol[0] == '>') {
+    else if (proc->symbol[0] == '>') {
         if (args[0]->number > args[1]->number)
             return true_node;
         else
             return false_node;
     }
-    else if (!strcmp(proc.symbol,"abs")) {
+    else if (!strcmp(proc->symbol,"abs")) {
         total = fabs(args[0]->number);
         result.type = NUMBER;
         result.number = total;
     }
-    else if (!strcmp(proc.symbol,"cons")) {
+    else if (!strcmp(proc->symbol,"cons")) {
         struct pair *newpair;
         newpair = pairalloc();
         newpair->car = args[0];
@@ -693,51 +693,51 @@ apply_prim(struct node proc, struct node *args[], int n)
         result.type = PAIR;
         result.pair = newpair;
     }
-    else if (!strcmp(proc.symbol,"car")) {
+    else if (!strcmp(proc->symbol,"car")) {
         return *args[0]->pair->car;
     }
-    else if (!strcmp(proc.symbol,"cdr")) {
+    else if (!strcmp(proc->symbol,"cdr")) {
         return *args[0]->pair->cdr;
     }
-    else if (!strcmp(proc.symbol,"null?")) {
+    else if (!strcmp(proc->symbol,"null?")) {
         if (args[0]->type == NIL)
             return true_node;
         else
             return false_node;
     }
-    else if (!strcmp(proc.symbol,"number?")) {
+    else if (!strcmp(proc->symbol,"number?")) {
         if (args[0]->type == NUMBER)
             return true_node;
         else
             return false_node;
     }
-    else if (!strcmp(proc.symbol,"string?")) {
+    else if (!strcmp(proc->symbol,"string?")) {
         if (args[0]->type == STRING)
             return true_node;
         else
             return false_node;
     }
-    else if (!strcmp(proc.symbol,"symbol?")) {
+    else if (!strcmp(proc->symbol,"symbol?")) {
         if (args[0]->type == SYMBOL)
             return true_node;
         else
             return false_node;
     }
-    else if (!strcmp(proc.symbol,"pair?")) {
+    else if (!strcmp(proc->symbol,"pair?")) {
         if (args[0]->type == PAIR)
             return true_node;
         else
             return false_node;
     }
-    else if (!strcmp(proc.symbol,"read")) {
+    else if (!strcmp(proc->symbol,"read")) {
         result = read_list();
         return result;
     }
-    else if (!strcmp(proc.symbol,"eq?")) {
+    else if (!strcmp(proc->symbol,"eq?")) {
         result.type = NUMBER;
         result.number = node_equal(*args[0], *args[1]);
     }
-    else if (!strcmp(proc.symbol,"display")) {
+    else if (!strcmp(proc->symbol,"display")) {
         if (args[0]->type == SYMBOL) {
             if (!strcmp(args[0]->symbol, "\\n"))
                 printf("\n");
@@ -748,13 +748,13 @@ apply_prim(struct node proc, struct node *args[], int n)
         result.type = NIL;
         return result;
     }
-    else if (!strcmp(proc.symbol,"begin")) {
+    else if (!strcmp(proc->symbol,"begin")) {
         return *args[n-1];
     }
-    else if (!strcmp(proc.symbol,"apply")) {
+    else if (!strcmp(proc->symbol,"apply")) {
         return apply(args[0],(args+1),(n-1));
     }
-    else if (!strcmp(proc.symbol,"listconv")) {
+    else if (!strcmp(proc->symbol,"listconv")) {
         return *list_to_ll(*args[0]);
     }
      return result;
