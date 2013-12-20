@@ -17,10 +17,10 @@
 
 /* EVAL STEP, BEGIN! */
 struct node
-eval_setcar(struct node *, struct environment *);
+eval_setcar(struct node *, struct environment **);
 
 struct node
-eval_setcdr(struct node *, struct environment *);
+eval_setcdr(struct node *, struct environment **);
 
 struct node
 apply(struct node *, struct node **, int);
@@ -29,46 +29,46 @@ struct node
 apply_prim(struct node *, struct node **, int);
 
 struct node
-create_procedure(char **, int, struct node *, struct environment *);
+create_procedure(char **, int, struct node *, struct environment **);
 
 struct node
-eval_if(struct node *, struct environment *);
+eval_if(struct node *, struct environment **);
 
 struct node
-eval_cond(struct node *, struct environment *);
+eval_cond(struct node *, struct environment **);
 
 struct node
-eval_let(struct node *, struct environment *);
+eval_let(struct node *, struct environment **);
 
 struct node *
 read_list(void);
 
 struct node
-eval_define(struct node *, struct environment *);
+eval_define(struct node *, struct environment **); 
 
 struct node
-eval_lambda(struct node *, struct environment *);
+eval_lambda(struct node *, struct environment **);
 
 struct node
-eval_delay(struct node *, struct environment *);
+eval_delay(struct node *, struct environment **);
 
 struct node
-eval_force(struct node, struct environment *);
+eval_force(struct node, struct environment **);
 
 struct node *
-eval_quote(struct node *, struct environment *);
+eval_quote(struct node *, struct environment **);
 
 struct node
-eval_application(struct node *, struct environment *);
+eval_application(struct node *, struct environment **);
 
 struct node
-eval_load(struct node *, struct environment *);
+eval_load(struct node *, struct environment **);
 
 struct variable *
-lookup(char *, struct environment *);
+lookup(char *, struct environment **);
 
-struct environment *
-copy_environment_list(struct environment *);
+struct environment **
+copy_environment_list(struct environment **);
 
 struct node *
 node_copy(struct node *);
@@ -129,86 +129,85 @@ node_copy(struct node *oldnode)
 
 // environments
 
-struct environment *
-extend_envlist(struct environment *envlist, struct variable *varlist, int n)
+void
+extend_envlist(struct environment **envlist, struct variable **varlist, int n)
 {
     int i;
-    struct environment newenv;
+    struct environment *newenv = envalloc();
+    newenv->vars = varlistalloc();
 
     // setup the new env
-    for (i=0; i < n; i++)
-        newenv.vars[i] = varlist[i];
-    newenv.status = i+1;
+    for (i=0; i < n; i++) {
+        newenv->vars[i] = varalloc();
+        *newenv->vars[i] = *varlist[i];
+    }
 
     //find the end of the envlist
-    for (i=0; envlist[i].status != 0; i++)
+    for (i=0; envlist[i] != NULL; i++)
         ;
     // set the end of the envlist to newenv
     envlist[i] = newenv;
-    // designate a new end
-    envlist[i+1].status = 0;
-    return envlist;
 }
 
-struct environment *
-copy_environment_list(struct environment *oldenv)
+struct environment **
+copy_environment_list(struct environment **oldenv)
 {
     int i, j;
-    struct environment *newenv;
+    struct environment **newenv;
     newenv = envlistalloc();
-    for (i = 0; oldenv[i].status != 0; i++) {
-        for (j=0; j < (oldenv[i].status - 1); j++) { 
-            newenv[i].vars[j].symbol = oldenv[i].vars[j].symbol;
-            newenv[i].vars[j].value = oldenv[i].vars[j].value;
+    for (i = 0; oldenv[i] != NULL; i++) {
+        newenv[i] = envalloc();
+        newenv[i]->vars = varlistalloc();
+        for (j=0; oldenv[i]->vars[j] != NULL; j++) { 
+            newenv[i]->vars[j] = varalloc();
+            newenv[i]->vars[j]->symbol = oldenv[i]->vars[j]->symbol;
+            newenv[i]->vars[j]->value = oldenv[i]->vars[j]->value;
         }
-        newenv[i].status = oldenv[i].status;
     }
-    newenv[i].status = 0;
     return newenv;
 }
 
-struct environment *
-bind_in_current_env(struct environment *envlist, char *symbol, struct node *value)
+void
+bind_in_current_env(struct environment **envlist, char *symbol, struct node *value)
 {
     int i, j;
-    struct variable *look;
 
     // first look it up 
-    look = lookup(symbol, envlist);
+    struct variable *look = lookup(symbol, envlist);
+
     if (look != NULL) { 
         // if it already exists, just change the value pointer to the new one
         look->value = value;
-        return envlist;
     }
-
-    for (i=0; envlist[i].status != 0; i++)
+    else {
+      // it doesn't exist
+      for (i=0; envlist[i] != NULL; i++)
         ;
-    i--; // bind in the current environment, not a new one
-    for (j=0; j < (envlist[i].status - 1); j++)
+      // bind in the current environment, not a new one, so use i-1
+      for (j=0; envlist[i-1]->vars[j] != NULL; j++)
         ;
-    envlist[i].status += 1;
-    envlist[i].vars[j].symbol = symbol;
-    envlist[i].vars[j].value = value;
-    return envlist;
+      envlist[i-1]->vars[j] = varalloc();
+      envlist[i-1]->vars[j]->symbol = symbol;
+      envlist[i-1]->vars[j]->value = value;
+    }
 }
 
 struct variable *
-lookup(char *symbol, struct environment *envlist)
+lookup(char *symbol, struct environment **envlist)
 {   
     int i, j;
     struct variable *result;
 
     // find the end of the envlist
-    for (i=0; envlist[i].status != 0; i++)
+    for (i=0; envlist[i] != NULL; i++)
         ;
-    //run through it backwards (skipping the terminal env)
+    //run through it backwards (skipping the null env)
     for (i = i-1; i >= 0; i--) {
         // scan through varlist until reaching end 
-        for (j=0; j < (envlist[i].status - 1); j++) { 
+        for (j=0; envlist[i]->vars[j] != NULL; j++) { 
             // if the symbols match, you've found the variable
-            if (strcmp(envlist[i].vars[j].symbol, symbol) == 0) {
-                result = &(envlist[i].vars[j]);
-                return result;
+            if (strcmp(envlist[i]->vars[j]->symbol, symbol) == 0) {
+                return envlist[i]->vars[j];
             }
         }
     }
@@ -217,10 +216,9 @@ lookup(char *symbol, struct environment *envlist)
 }
 
 struct node
-lookup_value(struct environment *envlist, struct node *expr)
+lookup_value(struct environment **envlist, struct node *expr)
 {
-    struct variable *var;
-    var = lookup(expr->symbol, envlist);
+    struct variable *var = lookup(expr->symbol, envlist);
     if (var != NULL)
         return *node_copy(var->value);
     else {
@@ -267,7 +265,7 @@ special_form(struct node *expr)
 
 
 struct node
-eval(struct node *expr, struct environment *env)
+eval(struct node *expr, struct environment **env)
 {
     switch (expr->type) {
         case NUMBER: // these fundamental data types are self-evaluating
@@ -331,62 +329,69 @@ eval(struct node *expr, struct environment *env)
 }
 
 struct node
-eval_setcar(struct node *expr, struct environment *env)
+eval_setcar(struct node *expr, struct environment **env)
 {
-    struct variable *var;
-    var = lookup(expr->list[1]->symbol,env);
+    struct variable *var = lookup(expr->list[1]->symbol,env);
+
     struct node newcar = eval(expr->list[2], env);
     var->value->pair->car = node_copy(&newcar);
+
     struct node *result = nalloc();
     result->type = NIL;
     return *result;
 }
 
 struct node
-eval_setcdr(struct node *expr, struct environment *env)
+eval_setcdr(struct node *expr, struct environment **env)
 {
-    struct variable *var;
-    var = lookup(expr->list[1]->symbol,env);
+    struct variable *var = lookup(expr->list[1]->symbol,env);
+
     struct node newcdr = eval(expr->list[2], env);
     var->value->pair->cdr = node_copy(&newcdr);
+
     struct node *result = nalloc();
     result->type = NIL;
     return *result;
 }
 
 struct node
-eval_let(struct node *expr, struct environment *env)
+eval_let(struct node *expr, struct environment **env)
 {
-    struct environment *newenv;
-    struct variable varlist[expr->list[1]->nlist];
-    struct node body, cur;
-    newenv = copy_environment_list(env);
     int i;
-
+    struct variable *varlist[expr->list[1]->nlist];
+    struct environment **newenv = copy_environment_list(env);
+    struct node cur;
     for (i = 0; i < expr->list[1]->nlist; i++) {
-        varlist[i].symbol = expr->list[1]->list[i]->list[0]->symbol;
-        cur = eval(expr->list[1]->list[i]->list[1], env);
-        varlist[i].value = node_copy(&cur);
-    }
+        varlist[i] = varalloc();
 
-    struct node *allocbody;
+        varlist[i]->symbol = expr->list[1]->list[i]->list[0]->symbol;
+
+        cur = eval(expr->list[1]->list[i]->list[1], env);
+        varlist[i]->value = node_copy(&cur);
+    }
     extend_envlist(newenv, varlist, i);
-    expr->list[1] = nalloc();
-    expr->list[1]->type = SYMBOL;
-    expr->list[1]->symbol = tokenalloc();
-    strcpy(expr->list[1]->symbol,"begin");
-    body.type = LIST;
-    body.list = (expr->list+1);
-    body.nlist = expr->nlist-1;
-    allocbody = node_copy(&body);
-    // body.list will get gc'd if we don't copy it, since it isn't 
+
+    struct node *begin = nalloc();
+    begin->type = SYMBOL;
+    begin->symbol = tokenalloc();
+    strcpy(begin->symbol,"begin");
+
+    expr->list[1] = begin; 
+
+    struct node *body = nalloc();
+    body->type = LIST;
+    body->list = (expr->list+1);
+    body->nlist = expr->nlist-1;
+
+    body = node_copy(body);
+    // body->list will get gc'd if we don't copy it, since it isn't 
     // actually allocated, it's an allocated_pointer+1
 
-    return eval(allocbody, newenv);
+    return eval(body, newenv);
 }
 
 struct node
-eval_cond(struct node *expr, struct environment *env)
+eval_cond(struct node *expr, struct environment **env)
 {
     int i;
     for (i = 1; i < expr->nlist; i++) {
@@ -399,23 +404,22 @@ eval_cond(struct node *expr, struct environment *env)
 }
 
 struct node *
-eval_quote(struct node *expr, struct environment *env)
+eval_quote(struct node *expr, struct environment **env)
 {
     return expr->list[1];
 }
 
 struct node
-eval_delay(struct node *expr, struct environment *env)
+eval_delay(struct node *expr, struct environment **env)
 {
     return create_procedure(NULL, 0, expr->list[1], env);
 }
 
 struct node
-eval_lambda(struct node *expr, struct environment *env)
+eval_lambda(struct node *expr, struct environment **env)
 {
     char *arglist[expr->list[1]->nlist];
     int i, dot;
-    struct node proc;
 
     // copies the tokens from the list in the second position to another array
     for (i = 0; i < expr->list[1]->nlist; i++) {
@@ -423,12 +427,11 @@ eval_lambda(struct node *expr, struct environment *env)
         strcpy(arglist[i], expr->list[1]->list[i]->symbol);
     }
 
-    proc = create_procedure(arglist, i, expr->list[2], env);
-    return proc;
+    return create_procedure(arglist, i, expr->list[2], env);
 }
 
 struct node
-eval_define(struct node *expr, struct environment *env)
+eval_define(struct node *expr, struct environment **env)
 {
     struct node *varvalue = nalloc();
     char *name;
@@ -436,27 +439,30 @@ eval_define(struct node *expr, struct environment *env)
     if (expr->list[1]->type == LIST) {
         name = expr->list[1]->list[0]->symbol;
 
-        struct node body;
         char *arglist[MAXVAR];
         int i;
         for (i = 1; i < expr->list[1]->nlist; i++) {
           arglist[(i-1)] = tokenalloc();
           strcpy(arglist[(i-1)], expr->list[1]->list[i]->symbol);
         }
-        struct node *allocbody;
-        expr->list[1] = nalloc();
-        expr->list[1]->type = SYMBOL;
-        expr->list[1]->symbol = tokenalloc();
-        strcpy(expr->list[1]->symbol,"begin");
-        body.type = LIST;
-        body.nlist = expr->nlist-1;
-        body.list = expr->list+1;
+        struct node *begin = nalloc();
+        begin->type = SYMBOL;
+        begin->symbol = tokenalloc();
+        strcpy(begin->symbol,"begin");
 
-        allocbody = node_copy(&body); 
+        expr->list[1] = begin; 
+
+        struct node *body = nalloc();
+        body->type = LIST;
+        body->list = (expr->list+1);
+        body->nlist = expr->nlist-1;
+
+        body = node_copy(body);
         // body.list will get gc'd if we don't copy it, since it isn't 
         // actually allocated, it's an allocated_pointer+1
 
-        *varvalue = create_procedure(arglist, (i - 1), allocbody, env);
+        *varvalue = create_procedure(arglist, (i - 1), body, env);
+        /* bind_in_current_env(varvalue->proc->env, name, varvalue); */
     }
     else {
         name = expr->list[1]->symbol;
@@ -467,7 +473,7 @@ eval_define(struct node *expr, struct environment *env)
 }
 
 struct node
-eval_load(struct node *expr, struct environment *env)
+eval_load(struct node *expr, struct environment **env)
 {
     if (expr->list[1]->type == STRING) {
         char* filename;
@@ -480,7 +486,7 @@ eval_load(struct node *expr, struct environment *env)
 }
 
 int
-istrue(struct node *expr, struct environment *env)
+istrue(struct node *expr, struct environment **env)
 {
     struct node val = eval(expr, env);
 
@@ -507,7 +513,7 @@ node_equal(struct node n1, struct node n2)
 }
 
 struct node
-eval_if(struct node *expr, struct environment *env)
+eval_if(struct node *expr, struct environment **env)
 {
     if (istrue(expr->list[1], env))
         return eval(expr->list[2], env);
@@ -516,7 +522,7 @@ eval_if(struct node *expr, struct environment *env)
 }
 
 struct node
-eval_application(struct node *expr, struct environment *env)
+eval_application(struct node *expr, struct environment **env)
 {
     struct node proc;
     struct node cur;
@@ -561,7 +567,7 @@ struct node
 apply_compound(struct node *proc, struct node *args[], int n)
 {
     int i, dot;
-    struct variable varlist[proc->proc->nargs];
+    struct variable *varlist[proc->proc->nargs];
 
     dot = 0;
     for (i = 0; i < proc->proc->nargs; i++) {
@@ -569,15 +575,17 @@ apply_compound(struct node *proc, struct node *args[], int n)
             dot = 1;
             break;
         }
-        varlist[i].symbol = proc->proc->symbols[i];
-        varlist[i].value = node_copy(args[i]);
+        varlist[i] = varalloc();
+        varlist[i]->symbol = proc->proc->symbols[i];
+        varlist[i]->value = node_copy(args[i]);
     }
     if (dot == 1) {
         struct node restargs;
         restargs.list = args+i;
         restargs.nlist = n-i;
-        varlist[i].symbol = proc->proc->symbols[(i+1)];
-        varlist[i].value = list_to_ll(restargs);
+        varlist[i] = varalloc();
+        varlist[i]->symbol = proc->proc->symbols[(i+1)];
+        varlist[i]->value = list_to_ll(restargs);
         i++;
     }
 
@@ -587,23 +595,27 @@ apply_compound(struct node *proc, struct node *args[], int n)
 }
 
 struct node
-create_procedure(char **arglist, int n, struct node *body, struct environment *env)
+create_procedure(char **arglist, int n, struct node *body, struct environment **env)
 {
     struct node *proc;
     int i = 0;
-    struct environment *envlist;
+    struct environment **envlist;
 
-    //envlist = copy_environment_list(env);
+    /* TODO:
+       the problem is that procedures don't get bound within their own environment
+    */
+    /* envlist = copy_environment_list(env); */
     envlist = env;
 
     proc = nalloc();
+    proc->type = PROC;
     proc->proc = procalloc();
+
+    proc->proc->env = envlist;
     proc->proc->body = node_copy(body);
     proc->proc->nargs = n;
     for (i = 0; i < n; i++)
         strcpy(proc->proc->symbols[i],arglist[i]);
-    proc->proc->env = envlist;
-    proc->type = PROC;
     return *proc;
 }
 
@@ -881,7 +893,9 @@ main()
     struct node result;
 
     // the global environment
-    struct environment globalenv[MAXENV] = {1, {}, varlistalloc()};
+    struct environment **globalenv = envlistalloc();
+    globalenv[0] = envalloc();
+    globalenv[0]->vars = varlistalloc();
 
     struct node *nil = nalloc();
     nil->type = NIL;
@@ -890,6 +904,7 @@ main()
 
     // get our defaults
     eval(parse_file("defaults.scm"), globalenv);
+    /* eval(parse_file("example.scm"), globalenv); */
 
     printf(">>");
     while ((c = getch()) != EOF) {

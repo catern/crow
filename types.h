@@ -42,14 +42,13 @@ struct variable {
 
 struct environment {
     int status;
-    struct variable vars[MAXVAR];
-    struct variable **newvars;
+    struct variable **vars;
 };
 
 struct procedure {
     char symbols[MAXTOKEN][MAXVAR];
     struct node *body;
-    struct environment *env;
+    struct environment **env;
     int nargs;
 };
 
@@ -69,6 +68,9 @@ char *
 stralloc();
 
 struct environment *
+envalloc();
+
+struct environment **
 envlistalloc();
 
 struct procedure *

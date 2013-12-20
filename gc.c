@@ -1,3 +1,6 @@
+/* TODO
+   switch from returning mn to updating a pointer to an mn
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include "types.h"
@@ -13,12 +16,12 @@ malloc_mon(size_t size)
     printf("malloc: nextpoiner: %d\n", nextpointer);
 #endif
     if (nextpointer < MAXPOINTERS) {
-        allocated[nextpointer] = malloc(size);
+        allocated[nextpointer] = calloc(1, size);
         return allocated[nextpointer++];
     }
     else {
         printf("malloc_mon: Golly that's a lot of pointers!\n");
-        return malloc(size);
+        return calloc(1, size);
     }
 }
 
@@ -43,12 +46,12 @@ compress_allocated(void)
 }
 
 void
-garbage_collect(struct environment *env)
+garbage_collect(struct environment **env)
 {
     int i, j, usedp = 0;
     void *inuse[MAXPOINTERS];
     usedp = env_pointers(inuse, env, usedp);
-#ifdef MALLOC_DEBUG
+#ifdef DEBUG_GC
     printf("pre-gc nextpointer: %d\n", nextpointer);
 #endif 
     for (i = 0; i < nextpointer; i++) {
@@ -62,7 +65,7 @@ garbage_collect(struct environment *env)
         }
     }
     compress_allocated();
-#ifdef MALLOC_DEBUG
+#ifdef DEBUG_GC
     printf("post-gc nextpointer: %d\n", nextpointer);
 #endif 
 }
@@ -95,7 +98,7 @@ struct variable {
 */
 
 int
-env_pointers(void *mlist[], struct environment *env, int mn)
+env_pointers(void *mlist[], struct environment **env, int mn)
 {
     int i, j;
 
@@ -104,10 +107,13 @@ env_pointers(void *mlist[], struct environment *env, int mn)
 
     mlist[mn++] = env;
 
-    for (i = 0; env[i].status != 0; i++) {
-        for (j=0; j < (env[i].status - 1); j++) {
-            mn = node_pointers(mlist, env[i].vars[j].value, mn);
-            mlist[mn++] = env[i].vars[j].symbol;
+    for (i = 0; env[i] != NULL; i++) {
+        mlist[mn++] = env[i];
+        mlist[mn++] = env[i]->vars;
+        for (j=0; env[i]->vars[j] != NULL; j++) {
+            mlist[mn++] = env[i]->vars[j];
+            mlist[mn++] = env[i]->vars[j]->symbol;
+            mn = node_pointers(mlist, env[i]->vars[j]->value, mn);
         }
     }
     return mn;

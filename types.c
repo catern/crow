@@ -18,7 +18,7 @@ struct node **
 nlistalloc()
 {
     struct node **nlist = (struct node **) 
-      malloc_mon(sizeof(struct node*[MAXLIST]));
+      malloc_mon(sizeof(struct node *) * MAXLIST);
     return nlist;
 }
 
@@ -35,9 +35,15 @@ stralloc()
 }
 
 struct environment *
+envalloc()
+{
+    return (struct environment *) malloc_mon(sizeof(struct environment));
+}
+
+struct environment **
 envlistalloc()
 {
-    return (struct environment *) malloc_mon(sizeof(struct environment[MAXENV]));
+    return (struct environment **) malloc_mon(sizeof(struct environment *) * MAXENV);
 }
 
 struct procedure *
