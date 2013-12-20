@@ -16,10 +16,10 @@
 #include "parser.h"
 
 /* EVAL STEP, BEGIN! */
-struct node
+struct node *
 eval_setcar(struct node *, struct environment **);
 
-struct node
+struct node *
 eval_setcdr(struct node *, struct environment **);
 
 struct node
@@ -28,7 +28,7 @@ apply(struct node *, struct node **, int);
 struct node
 apply_prim(struct node *, struct node **, int);
 
-struct node
+struct node *
 create_procedure(char **, int, struct node *, struct environment **);
 
 struct node
@@ -46,10 +46,10 @@ read_list(void);
 struct node
 eval_define(struct node *, struct environment **); 
 
-struct node
+struct node *
 eval_lambda(struct node *, struct environment **);
 
-struct node
+struct node *
 eval_delay(struct node *, struct environment **);
 
 struct node
@@ -61,7 +61,7 @@ eval_quote(struct node *, struct environment **);
 struct node
 eval_application(struct node *, struct environment **);
 
-struct node
+struct node *
 eval_load(struct node *, struct environment **);
 
 struct variable *
@@ -291,10 +291,10 @@ eval(struct node *expr, struct environment **env)
                     return eval_define(expr, env);
                     break;
                 case LAMBDA:
-                    return eval_lambda(expr, env);
+                    return *eval_lambda(expr, env);
                     break;
                 case DELAY:
-                    return eval_delay(expr, env);
+                    return *eval_delay(expr, env);
                     break;
                 case QUOTE:
                     return *eval_quote(expr, env);
@@ -303,13 +303,13 @@ eval(struct node *expr, struct environment **env)
                     return eval_let(expr, env);
                     break;
                 case SETCAR:
-                    return eval_setcar(expr, env);
+                    return *eval_setcar(expr, env);
                     break;
                 case SETCDR:
-                    return eval_setcdr(expr, env);
+                    return *eval_setcdr(expr, env);
                     break;
                 case LOAD:
-                    return eval_load(expr, env);
+                    return *eval_load(expr, env);
                     break;
                 default:
                     return eval_application(expr, env);
@@ -328,7 +328,7 @@ eval(struct node *expr, struct environment **env)
     }
 }
 
-struct node
+struct node *
 eval_setcar(struct node *expr, struct environment **env)
 {
     struct variable *var = lookup(expr->list[1]->symbol,env);
@@ -338,10 +338,10 @@ eval_setcar(struct node *expr, struct environment **env)
 
     struct node *result = nalloc();
     result->type = NIL;
-    return *result;
+    return result;
 }
 
-struct node
+struct node *
 eval_setcdr(struct node *expr, struct environment **env)
 {
     struct variable *var = lookup(expr->list[1]->symbol,env);
@@ -351,7 +351,7 @@ eval_setcdr(struct node *expr, struct environment **env)
 
     struct node *result = nalloc();
     result->type = NIL;
-    return *result;
+    return result;
 }
 
 struct node
@@ -409,13 +409,13 @@ eval_quote(struct node *expr, struct environment **env)
     return expr->list[1];
 }
 
-struct node
+struct node *
 eval_delay(struct node *expr, struct environment **env)
 {
     return create_procedure(NULL, 0, expr->list[1], env);
 }
 
-struct node
+struct node *
 eval_lambda(struct node *expr, struct environment **env)
 {
     char *arglist[expr->list[1]->nlist];
@@ -461,10 +461,11 @@ eval_define(struct node *expr, struct environment **env)
         // body.list will get gc'd if we don't copy it, since it isn't 
         // actually allocated, it's an allocated_pointer+1
 
-        *varvalue = create_procedure(arglist, (i - 1), body, env);
+        *varvalue = *create_procedure(arglist, (i - 1), body, env);
         /* bind_in_current_env(varvalue->proc->env, name, varvalue); */
     }
     else {
+        varvalue = nalloc();
         name = expr->list[1]->symbol;
         *varvalue = eval(expr->list[2], env);
     }
@@ -472,7 +473,7 @@ eval_define(struct node *expr, struct environment **env)
     return *varvalue;
 }
 
-struct node
+struct node *
 eval_load(struct node *expr, struct environment **env)
 {
     if (expr->list[1]->type == STRING) {
@@ -482,7 +483,7 @@ eval_load(struct node *expr, struct environment **env)
     }
     struct node *result = nalloc();
     result->type = NIL;
-    return *result;
+    return result;
 }
 
 int
@@ -538,7 +539,7 @@ eval_application(struct node *expr, struct environment **env)
 }
 
 struct node *
-list_to_ll(struct node oldnode)
+list_to_ll(struct node *oldnode)
 {
     // this can definitely be made more elegant
     struct node *topnode, *curnode, *nextnode;
@@ -546,17 +547,17 @@ list_to_ll(struct node oldnode)
 
     topnode = nextnode = nalloc();
 
-    for (i = 0; i < oldnode.nlist; i++) {
+    for (i = 0; i < oldnode->nlist; i++) {
         curnode = nextnode;
         nextnode = nalloc();
 
         curnode->pair = pairalloc();
         curnode->type = PAIR;
-        if (oldnode.list[i]->type == LIST) {
-            curnode->pair->car = list_to_ll(*oldnode.list[i]);
+        if (oldnode->list[i]->type == LIST) {
+            curnode->pair->car = list_to_ll(oldnode->list[i]);
         }
         else
-            curnode->pair->car = node_copy(oldnode.list[i]);
+            curnode->pair->car = node_copy(oldnode->list[i]);
         curnode->pair->cdr = nextnode;
     }
     nextnode->type = NIL;
@@ -585,7 +586,7 @@ apply_compound(struct node *proc, struct node *args[], int n)
         restargs.nlist = n-i;
         varlist[i] = varalloc();
         varlist[i]->symbol = proc->proc->symbols[(i+1)];
-        varlist[i]->value = list_to_ll(restargs);
+        varlist[i]->value = list_to_ll(&restargs);
         i++;
     }
 
@@ -594,7 +595,7 @@ apply_compound(struct node *proc, struct node *args[], int n)
     return eval(proc->proc->body, proc->proc->env);
 }
 
-struct node
+struct node *
 create_procedure(char **arglist, int n, struct node *body, struct environment **env)
 {
     struct node *proc;
@@ -616,7 +617,7 @@ create_procedure(char **arglist, int n, struct node *body, struct environment **
     proc->proc->nargs = n;
     for (i = 0; i < n; i++)
         strcpy(proc->proc->symbols[i],arglist[i]);
-    return *proc;
+    return proc;
 }
 
 struct node
@@ -804,7 +805,7 @@ apply_prim(struct node *proc, struct node *args[], int n)
         return apply(args[0],(args+1),(n-1));
     }
     else if (!strcmp(proc->symbol,"listconv")) {
-        return *list_to_ll(*args[0]);
+        return *list_to_ll(args[0]);
     }
     return *result;
 }
