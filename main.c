@@ -39,7 +39,7 @@ struct node
 apply_prim(struct node *, struct node **, int);
 
 struct node
-create_procedure(char **, int, struct node, struct environment *);
+create_procedure(char **, int, struct node *, struct environment *);
 
 struct node
 eval_if(struct node *, struct environment *);
@@ -75,7 +75,7 @@ struct node
 eval_load(struct node *, struct environment *);
 
 struct variable *
-lookup(struct environment *, struct node *);
+lookup(struct node *, struct environment *);
 
 struct environment *
 copy_environment_list(struct environment *);
@@ -187,7 +187,7 @@ bind_in_current_env(struct environment *envlist, struct variable var)
     temp.symbol = var.symbol;
 
     // first look it up 
-    look = lookup(envlist, &temp);
+    look = lookup(&temp, envlist);
     if (look != &undefinedvar) { 
         // if it already exists, just change the value pointer to the new one
         look->value = var.value;
@@ -205,7 +205,7 @@ bind_in_current_env(struct environment *envlist, struct variable var)
 }
 
 struct variable *
-lookup(struct environment *envlist, struct node *expr)
+lookup(struct node *expr, struct environment *envlist)
 {   
     int i, j;
     struct variable *result;
@@ -232,7 +232,7 @@ struct node
 lookup_value(struct environment *envlist, struct node *expr)
 {
     struct variable *var;
-    var = lookup(envlist, expr);
+    var = lookup(expr, envlist);
     if (var != &undefinedvar)
         return *node_copy(var->value);
     else
@@ -343,7 +343,7 @@ struct node
 eval_setcar(struct node *expr, struct environment *env)
 {
     struct variable *var;
-    var = lookup(env,expr->list[1]);
+    var = lookup(expr->list[1],env);
     struct node newcar = eval(expr->list[2], env);
     var->value->pair->car = node_copy(&newcar);
     return nil_node;
@@ -353,7 +353,7 @@ struct node
 eval_setcdr(struct node *expr, struct environment *env)
 {
     struct variable *var;
-    var = lookup(env,expr->list[1]);
+    var = lookup(expr->list[1],env);
     struct node newcdr = eval(expr->list[2], env);
     var->value->pair->cdr = node_copy(&newcdr);
     return nil_node;
@@ -412,7 +412,7 @@ eval_quote(struct node *expr, struct environment *env)
 struct node
 eval_delay(struct node *expr, struct environment *env)
 {
-    return create_procedure(NULL, 0, *expr->list[1], env);
+    return create_procedure(NULL, 0, expr->list[1], env);
 }
 
 struct node
@@ -420,7 +420,6 @@ eval_lambda(struct node *expr, struct environment *env)
 {
     char *arglist[expr->list[1]->nlist];
     int i, dot;
-    struct node body;
     struct node proc;
 
     // copies the tokens from the list in the second position to another array
@@ -429,9 +428,7 @@ eval_lambda(struct node *expr, struct environment *env)
         strcpy(arglist[i], expr->list[1]->list[i]->symbol);
     }
 
-    body = *expr->list[2];
-
-    proc = create_procedure(arglist, i, body, env);
+    proc = create_procedure(arglist, i, expr->list[2], env);
     return proc;
 }
 
@@ -467,7 +464,7 @@ eval_define(struct node *expr, struct environment *env)
         // body.list will get gc'd if we don't copy it, since it isn't 
         // actually allocated, it's an allocated_pointer+1
 
-        (*varvalue) = create_procedure(arglist, (i - 1), *allocbody, env);
+        (*varvalue) = create_procedure(arglist, (i - 1), allocbody, env);
     }
     else {
         var.symbol = expr->list[1]->symbol;
@@ -598,7 +595,7 @@ apply_compound(struct node *proc, struct node *args[], int n)
 }
 
 struct node
-create_procedure(char **arglist, int n, struct node body, struct environment *env)
+create_procedure(char **arglist, int n, struct node *body, struct environment *env)
 {
     struct node proc;
     int i = 0;
@@ -608,7 +605,7 @@ create_procedure(char **arglist, int n, struct node body, struct environment *en
     envlist = env;
 
     proc.proc = procalloc();
-    proc.proc->body = node_copy(&body);
+    proc.proc->body = node_copy(body);
     proc.proc->nargs = n;
     for (i = 0; i < n; i++)
         strcpy(proc.proc->symbols[i],arglist[i]);
