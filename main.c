@@ -27,10 +27,10 @@ struct variable undefinedvar;
 
 /* EVAL STEP, BEGIN! */
 struct node
-eval_setcar(struct node, struct environment *);
+eval_setcar(struct node *, struct environment *);
 
 struct node
-eval_setcdr(struct node, struct environment *);
+eval_setcdr(struct node *, struct environment *);
 
 struct node
 apply(struct node, struct node **, int);
@@ -314,10 +314,10 @@ eval(struct node *expr, struct environment *env)
                     return eval_let(*expr, env);
                     break;
                 case SETCAR:
-                    return eval_setcar(*expr, env);
+                    return eval_setcar(expr, env);
                     break;
                 case SETCDR:
-                    return eval_setcdr(*expr, env);
+                    return eval_setcdr(expr, env);
                     break;
                 case LOAD:
                     return eval_load(expr, env);
@@ -339,20 +339,20 @@ eval(struct node *expr, struct environment *env)
 }
 
 struct node
-eval_setcar(struct node expr, struct environment *env)
+eval_setcar(struct node *expr, struct environment *env)
 {
     struct variable *var;
-    var = lookup(env,*expr.list[1]);
-    var->value->pair->car = node_copy(eval(expr.list[2], env));
+    var = lookup(env,*expr->list[1]);
+    var->value->pair->car = node_copy(eval(expr->list[2], env));
     return nil_node;
 }
 
 struct node
-eval_setcdr(struct node expr, struct environment *env)
+eval_setcdr(struct node *expr, struct environment *env)
 {
     struct variable *var;
-    var = lookup(env,*expr.list[1]);
-    var->value->pair->cdr = node_copy(eval(expr.list[2], env));
+    var = lookup(env,*expr->list[1]);
+    var->value->pair->cdr = node_copy(eval(expr->list[2], env));
     return nil_node;
 }
 
