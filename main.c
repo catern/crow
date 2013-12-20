@@ -43,7 +43,7 @@ eval_let(struct node *, struct environment **);
 struct node *
 read_list(void);
 
-struct node
+struct node *
 eval_define(struct node *, struct environment **); 
 
 struct node *
@@ -288,7 +288,7 @@ eval(struct node *expr, struct environment **env)
                     return eval_cond(expr, env);
                     break;
                 case DEFINE:
-                    return eval_define(expr, env);
+                    return *eval_define(expr, env);
                     break;
                 case LAMBDA:
                     return *eval_lambda(expr, env);
@@ -430,7 +430,7 @@ eval_lambda(struct node *expr, struct environment **env)
     return create_procedure(arglist, i, expr->list[2], env);
 }
 
-struct node
+struct node *
 eval_define(struct node *expr, struct environment **env)
 {
     struct node *varvalue = nalloc();
@@ -461,7 +461,7 @@ eval_define(struct node *expr, struct environment **env)
         // body.list will get gc'd if we don't copy it, since it isn't 
         // actually allocated, it's an allocated_pointer+1
 
-        *varvalue = *create_procedure(arglist, (i - 1), body, env);
+        varvalue = create_procedure(arglist, (i - 1), body, env);
         /* bind_in_current_env(varvalue->proc->env, name, varvalue); */
     }
     else {
@@ -470,7 +470,7 @@ eval_define(struct node *expr, struct environment **env)
         *varvalue = eval(expr->list[2], env);
     }
     bind_in_current_env(env, name, varvalue);
-    return *varvalue;
+    return varvalue;
 }
 
 struct node *
