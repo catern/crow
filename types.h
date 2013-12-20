@@ -43,6 +43,7 @@ struct variable {
 struct environment {
     int status;
     struct variable vars[MAXVAR];
+    struct variable **newvars;
 };
 
 struct procedure {
@@ -72,3 +73,9 @@ envlistalloc();
 
 struct procedure *
 procalloc();
+
+struct variable *
+varalloc();
+
+struct variable **
+varlistalloc();

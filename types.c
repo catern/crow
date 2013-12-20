@@ -51,3 +51,9 @@ varalloc()
 {
     return (struct variable *) malloc_mon(sizeof(struct variable));
 }
+
+struct variable **
+varlistalloc()
+{
+    return (struct variable **) malloc_mon(sizeof(struct variable *) * MAXVAR);
+}

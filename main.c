@@ -168,17 +168,16 @@ copy_environment_list(struct environment *oldenv)
 }
 
 struct environment *
-bind_in_current_env(struct environment *envlist, struct variable var)
+bind_in_current_env(struct environment *envlist, char *symbol, struct node *value)
 {
     int i, j;
     struct variable *look;
-    struct node temp;
 
     // first look it up 
-    look = lookup(var.symbol, envlist);
+    look = lookup(symbol, envlist);
     if (look != NULL) { 
         // if it already exists, just change the value pointer to the new one
-        look->value = var.value;
+        look->value = value;
         return envlist;
     }
 
@@ -188,7 +187,8 @@ bind_in_current_env(struct environment *envlist, struct variable var)
     for (j=0; j < (envlist[i].status - 1); j++)
         ;
     envlist[i].status += 1;
-    envlist[i].vars[j] = var;
+    envlist[i].vars[j].symbol = symbol;
+    envlist[i].vars[j].value = value;
     return envlist;
 }
 
@@ -430,14 +430,11 @@ eval_lambda(struct node *expr, struct environment *env)
 struct node
 eval_define(struct node *expr, struct environment *env)
 {
-    struct variable var;
-    struct node *varvalue;
-    varvalue = nalloc();
+    struct node *varvalue = nalloc();
+    char *name;
 
     if (expr->list[1]->type == LIST) {
-        var.symbol = expr->list[1]->list[0]->symbol;
-        var.value = varvalue; 
-        bind_in_current_env(env, var);
+        name = expr->list[1]->list[0]->symbol;
 
         struct node body;
         char *arglist[MAXVAR];
@@ -459,16 +456,14 @@ eval_define(struct node *expr, struct environment *env)
         // body.list will get gc'd if we don't copy it, since it isn't 
         // actually allocated, it's an allocated_pointer+1
 
-        (*varvalue) = create_procedure(arglist, (i - 1), allocbody, env);
+        *varvalue = create_procedure(arglist, (i - 1), allocbody, env);
     }
     else {
-        var.symbol = expr->list[1]->symbol;
-        var.value = varvalue; 
-        bind_in_current_env(env, var);
-
-        (*varvalue) = eval(expr->list[2], env);
+        name = expr->list[1]->symbol;
+        *varvalue = eval(expr->list[2], env);
     }
-    return (*varvalue);
+    bind_in_current_env(env, name, varvalue);
+    return *varvalue;
 }
 
 struct node
@@ -886,13 +881,12 @@ main()
     struct node result;
 
     // the global environment
-    struct environment globalenv[MAXENV] = {1, {}};
+    struct environment globalenv[MAXENV] = {1, {}, varlistalloc()};
 
     struct node *nil = nalloc();
     nil->type = NIL;
     // the symbol nil is manually bound to the value nil 
-    struct variable nilvar = {"nil", nil};
-    bind_in_current_env(globalenv, nilvar);
+    bind_in_current_env(globalenv, "nil", nil);
 
     // get our defaults
     eval(parse_file("defaults.scm"), globalenv);
