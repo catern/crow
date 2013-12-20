@@ -1,6 +1,6 @@
 /* insert GPLv3+ here */
 /* TODO: 
-   segment my code!
+   strip out nil_node, true_node, false_node and undefined_var
    switch to union types
    switch to passing pointers around
 //TODO: switch to passing pointers around instead of structs
@@ -50,7 +50,7 @@ eval_cond(struct node *, struct environment *);
 struct node
 eval_let(struct node *, struct environment *);
 
-struct node
+struct node *
 read_list(void);
 
 struct node
@@ -65,7 +65,7 @@ eval_delay(struct node *, struct environment *);
 struct node
 eval_force(struct node, struct environment *);
 
-struct node
+struct node *
 eval_quote(struct node *, struct environment *);
 
 struct node
@@ -308,7 +308,7 @@ eval(struct node *expr, struct environment *env)
                     return eval_delay(expr, env);
                     break;
                 case QUOTE:
-                    return eval_quote(expr, env);
+                    return *eval_quote(expr, env);
                     break;
                 case LET:
                     return eval_let(expr, env);
@@ -403,10 +403,10 @@ eval_cond(struct node *expr, struct environment *env)
     }
 }
 
-struct node
+struct node *
 eval_quote(struct node *expr, struct environment *env)
 {
-    return *expr->list[1];
+    return expr->list[1];
 }
 
 struct node
@@ -597,33 +597,36 @@ apply_compound(struct node *proc, struct node *args[], int n)
 struct node
 create_procedure(char **arglist, int n, struct node *body, struct environment *env)
 {
-    struct node proc;
+    struct node *proc;
     int i = 0;
     struct environment *envlist;
 
     //envlist = copy_environment_list(env);
     envlist = env;
 
-    proc.proc = procalloc();
-    proc.proc->body = node_copy(body);
-    proc.proc->nargs = n;
+    proc = nalloc();
+    proc->proc = procalloc();
+    proc->proc->body = node_copy(body);
+    proc->proc->nargs = n;
     for (i = 0; i < n; i++)
-        strcpy(proc.proc->symbols[i],arglist[i]);
-    proc.proc->env = envlist;
-    proc.type = PROC;
-    return proc;
+        strcpy(proc->proc->symbols[i],arglist[i]);
+    proc->proc->env = envlist;
+    proc->type = PROC;
+    return *proc;
 }
 
 struct node
 apply(struct node *proc, struct node **args, int n)
 {
-    struct node result;
+    struct node *result = nalloc();
     if (primitive_proc(proc)) {
-        result = apply_prim(proc, args, n);
-        return result;
+        *result = apply_prim(proc, args, n);
     }
     else
-        return apply_compound(proc, args, n);
+      {
+        *result = apply_compound(proc, args, n);
+      }
+    return *result;
 }
 
 struct node
@@ -631,42 +634,42 @@ apply_prim(struct node *proc, struct node *args[], int n)
 {
     int i;
     double total;
-    struct node result;
-    result.type = NIL;
+    struct node *result = nalloc();
+    result->type = NIL;
     total = 0;
 
     if (proc->symbol[0] == '+') {
         for (i = 0; i < n; i++)
             total += args[i]->number;
-        result.type = NUMBER;
-        result.number = total;
+        result->type = NUMBER;
+        result->number = total;
     }
     else if (proc->symbol[0] == '-') {
         total = args[0]->number;
         for (i = 1; i < n; i++)
             total = total - args[i]->number;
-        result.type = NUMBER;
-        result.number = total;
+        result->type = NUMBER;
+        result->number = total;
     }
     else if (proc->symbol[0] == '*') {
         total = 1;
         for (i = 0; i < n; i++)
             total = total * args[i]->number;
-        result.type = NUMBER;
-        result.number = total;
+        result->type = NUMBER;
+        result->number = total;
     }
     else if (proc->symbol[0] == '/') {
         total = args[0]->number / args[1]->number;
-        result.type = NUMBER;
-        result.number = total;
+        result->type = NUMBER;
+        result->number = total;
     }
     else if (proc->symbol[0] == '=') {
         int temp = args[0]->number;
         total = 1;
         for (i = 0; i < n; i++)
             total = total && (temp == args[i]->number);
-        result.type = NUMBER;
-        result.number = total;
+        result->type = NUMBER;
+        result->number = total;
     }
     else if (proc->symbol[0] == '<') {
         if (args[0]->number < args[1]->number)
@@ -682,16 +685,16 @@ apply_prim(struct node *proc, struct node *args[], int n)
     }
     else if (!strcmp(proc->symbol,"abs")) {
         total = fabs(args[0]->number);
-        result.type = NUMBER;
-        result.number = total;
+        result->type = NUMBER;
+        result->number = total;
     }
     else if (!strcmp(proc->symbol,"cons")) {
         struct pair *newpair;
         newpair = pairalloc();
         newpair->car = args[0];
         newpair->cdr = args[1];
-        result.type = PAIR;
-        result.pair = newpair;
+        result->type = PAIR;
+        result->pair = newpair;
     }
     else if (!strcmp(proc->symbol,"car")) {
         return *args[0]->pair->car;
@@ -731,11 +734,10 @@ apply_prim(struct node *proc, struct node *args[], int n)
     }
     else if (!strcmp(proc->symbol,"read")) {
         result = read_list();
-        return result;
     }
     else if (!strcmp(proc->symbol,"eq?")) {
-        result.type = NUMBER;
-        result.number = node_equal(*args[0], *args[1]);
+        result->type = NUMBER;
+        result->number = node_equal(*args[0], *args[1]);
     }
     else if (!strcmp(proc->symbol,"display")) {
         if (args[0]->type == SYMBOL) {
@@ -745,8 +747,7 @@ apply_prim(struct node *proc, struct node *args[], int n)
         else 
             minimal_print_node(args[0]);
             
-        result.type = NIL;
-        return result;
+        result->type = NIL;
     }
     else if (!strcmp(proc->symbol,"begin")) {
         return *args[n-1];
@@ -757,7 +758,7 @@ apply_prim(struct node *proc, struct node *args[], int n)
     else if (!strcmp(proc->symbol,"listconv")) {
         return *list_to_ll(*args[0]);
     }
-     return result;
+    return *result;
 }
 
 primitive_proc(struct node *proc)
@@ -814,11 +815,11 @@ primitive_proc(struct node *proc)
         return 0;
 }
 
-struct node
+struct node *
 read_list()
 {
     int c;
-    struct node root;
+    struct node *root;
     struct node result;
 
     printf("!>> ");
@@ -830,7 +831,7 @@ read_list()
     while ((c = getch()) != '\n') {
         if (!iswspace(c)) {
             ungetch(c);
-            root = *parse_token_ll();
+            root = parse_token_ll();
             //print_node(&root);
         }
     } 
