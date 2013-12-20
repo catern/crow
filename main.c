@@ -1,6 +1,5 @@
 /* insert GPLv3+ here */
 /* TODO: 
-   strip out nil_node, true_node, false_node and undefined_var
    gliiiiiiiiiiib
    switch to union types
    switch to passing pointers around
@@ -15,10 +14,6 @@
 #include "gc.h"
 #include "printnode.h"
 #include "parser.h"
-
-// special nodes
-
-// end special nodes
 
 /* EVAL STEP, BEGIN! */
 struct node
@@ -70,7 +65,7 @@ struct node
 eval_load(struct node *, struct environment *);
 
 struct variable *
-lookup(struct node *, struct environment *);
+lookup(char *, struct environment *);
 
 struct environment *
 copy_environment_list(struct environment *);
@@ -179,10 +174,8 @@ bind_in_current_env(struct environment *envlist, struct variable var)
     struct variable *look;
     struct node temp;
 
-    temp.symbol = var.symbol;
-
     // first look it up 
-    look = lookup(&temp, envlist);
+    look = lookup(var.symbol, envlist);
     if (look != NULL) { 
         // if it already exists, just change the value pointer to the new one
         look->value = var.value;
@@ -200,7 +193,7 @@ bind_in_current_env(struct environment *envlist, struct variable var)
 }
 
 struct variable *
-lookup(struct node *expr, struct environment *envlist)
+lookup(char *symbol, struct environment *envlist)
 {   
     int i, j;
     struct variable *result;
@@ -213,13 +206,13 @@ lookup(struct node *expr, struct environment *envlist)
         // scan through varlist until reaching end 
         for (j=0; j < (envlist[i].status - 1); j++) { 
             // if the symbols match, you've found the variable
-            if (strcmp(envlist[i].vars[j].symbol, expr->symbol) == 0) {
+            if (strcmp(envlist[i].vars[j].symbol, symbol) == 0) {
                 result = &(envlist[i].vars[j]);
                 return result;
             }
         }
     }
-    printf("lookup: looked up a nonexistent variable: %s\n", expr->symbol);
+    printf("lookup: looked up a nonexistent variable: %s\n", symbol);
     return NULL;
 }
 
@@ -227,7 +220,7 @@ struct node
 lookup_value(struct environment *envlist, struct node *expr)
 {
     struct variable *var;
-    var = lookup(expr, envlist);
+    var = lookup(expr->symbol, envlist);
     if (var != NULL)
         return *node_copy(var->value);
     else {
@@ -341,7 +334,7 @@ struct node
 eval_setcar(struct node *expr, struct environment *env)
 {
     struct variable *var;
-    var = lookup(expr->list[1],env);
+    var = lookup(expr->list[1]->symbol,env);
     struct node newcar = eval(expr->list[2], env);
     var->value->pair->car = node_copy(&newcar);
     struct node *result = nalloc();
@@ -353,7 +346,7 @@ struct node
 eval_setcdr(struct node *expr, struct environment *env)
 {
     struct variable *var;
-    var = lookup(expr->list[1],env);
+    var = lookup(expr->list[1]->symbol,env);
     struct node newcdr = eval(expr->list[2], env);
     var->value->pair->cdr = node_copy(&newcdr);
     struct node *result = nalloc();
