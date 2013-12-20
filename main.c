@@ -210,7 +210,9 @@ lookup(char *symbol, struct environment **envlist)
             }
         }
     }
+    #ifdef DEBUG
     printf("lookup: looked up a nonexistent variable: %s\n", symbol);
+    #endif
     return NULL;
 }
 
@@ -437,7 +439,7 @@ eval_define(struct node *expr, struct environment **env)
         name = expr->list[1]->list[0]->symbol;
 
         char *arglist[MAXVAR];
-        int i;
+        int i,j;
         for (i = 1; i < expr->list[1]->nlist; i++) {
           arglist[(i-1)] = tokenalloc();
           strcpy(arglist[(i-1)], expr->list[1]->list[i]->symbol);
@@ -446,8 +448,7 @@ eval_define(struct node *expr, struct environment **env)
         // create node to represent the expressions in the rest of the define
         struct node *body = nalloc();
         body->type = LIST;
-        body->list = (expr->list+1);
-        /* body->list = nlistalloc(); */
+        body->list = nlistalloc();
 
         // create begin node to put at the beginning of list
         struct node *begin = nalloc();
@@ -456,16 +457,12 @@ eval_define(struct node *expr, struct environment **env)
         strcpy(begin->symbol,"begin");
 
         body->list[0] = begin; 
-        /* // rest of list is the expressions from the let */
-        /* for (i = 1; i+1 < expr->nlist; i++) { */
-        /*     body->list[i] = expr->list[i+1]; */
-        /* } */
+        // rest of list is the expressions from the let
+        for (j = 1; j+1 < expr->nlist; j++) {
+            body->list[j] = expr->list[j+1];
+        }
 
         body->nlist = expr->nlist - 1;
-        body = node_copy(body);
-        // body.list will get gc'd if we don't copy it, since it isn't 
-        // actually allocated, it's an allocated_pointer+1
-
 
         varvalue = create_procedure(arglist, (i - 1), body, env);
         /* bind_in_current_env(varvalue->proc->env, name, varvalue); */
@@ -611,7 +608,7 @@ create_procedure(char **arglist, int n, struct node *body, struct environment **
     proc->proc = procalloc();
 
     proc->proc->env = envlist;
-    proc->proc->body = node_copy(body);
+    proc->proc->body = body;
     proc->proc->nargs = n;
     for (i = 0; i < n; i++)
         strcpy(proc->proc->symbols[i],arglist[i]);
@@ -711,10 +708,10 @@ apply_prim(struct node *proc, struct node *args[], int n)
         result->pair = newpair;
     }
     else if (!strcmp(proc->symbol,"car")) {
-        result = node_copy(args[0]->pair->car);
+        result = args[0]->pair->car;
     }
     else if (!strcmp(proc->symbol,"cdr")) {
-        result = node_copy(args[0]->pair->cdr);
+        result = args[0]->pair->cdr;
     }
     else if (!strcmp(proc->symbol,"null?")) {
         if (args[0]->type == NIL)
@@ -794,7 +791,7 @@ apply_prim(struct node *proc, struct node *args[], int n)
         result->type = NIL;
     }
     else if (!strcmp(proc->symbol,"begin")) {
-        result = node_copy(args[n-1]);
+        result = args[n-1];
     }
     else if (!strcmp(proc->symbol,"apply")) {
         result = apply(args[0],(args+1),(n-1));
@@ -900,7 +897,6 @@ main()
     eval(parse_file("defaults.scm"), globalenv);
     /* eval(parse_file("example.scm"), globalenv); */
 
-    printf(">>");
     while ((c = getch()) != EOF) {
         if (!iswspace(c)) {
             ungetch(c);

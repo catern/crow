@@ -12,7 +12,7 @@ int nextpointer = 0;
 void *
 malloc_mon(size_t size)
 {
-#ifdef MALLOC_DEBUG
+#ifdef DEBUG_GC
     printf("malloc: nextpoiner: %d\n", nextpointer);
 #endif
     if (nextpointer < MAXPOINTERS) {
