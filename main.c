@@ -42,10 +42,10 @@ struct node
 create_procedure(char **, int, struct node, struct environment *);
 
 struct node
-eval_if(struct node, struct environment *);
+eval_if(struct node *, struct environment *);
 
 struct node
-eval_cond(struct node, struct environment *);
+eval_cond(struct node *, struct environment *);
 
 struct node
 eval_let(struct node, struct environment *);
@@ -293,10 +293,10 @@ eval(struct node *expr, struct environment *env)
                 // special syntactic forms need special handling
                 // (i.e., forms where you can't simply eval all the arguments)
                 case IF:
-                    return eval_if(*expr, env);
+                    return eval_if(expr, env);
                     break;
                 case COND:
-                    return eval_cond(*expr, env);
+                    return eval_cond(expr, env);
                     break;
                 case DEFINE:
                     return eval_define(*expr, env);
@@ -387,14 +387,14 @@ eval_let(struct node expr, struct environment *env)
 }
 
 struct node
-eval_cond(struct node expr, struct environment *env)
+eval_cond(struct node *expr, struct environment *env)
 {
     int i;
-    for (i = 1; i < expr.nlist; i++) {
-        if ((expr.list[i]->list[0]->type == SYMBOL && 
-                    !strcmp(expr.list[i]->list[0]->symbol,"else")) ||
-            istrue(expr.list[i]->list[0], env)) {
-            return eval(expr.list[i]->list[1], env);
+    for (i = 1; i < expr->nlist; i++) {
+        if ((expr->list[i]->list[0]->type == SYMBOL && 
+                    !strcmp(expr->list[i]->list[0]->symbol,"else")) ||
+            istrue(expr->list[i]->list[0], env)) {
+            return eval(expr->list[i]->list[1], env);
         }
     }
 }
@@ -515,12 +515,12 @@ node_equal(struct node n1, struct node n2)
 }
 
 struct node
-eval_if(struct node expr, struct environment *env)
+eval_if(struct node *expr, struct environment *env)
 {
-    if (istrue(expr.list[1], env))
-        return eval(expr.list[2], env);
+    if (istrue(expr->list[1], env))
+        return eval(expr->list[2], env);
     else
-        return eval(expr.list[3], env);
+        return eval(expr->list[3], env);
 }
 
 struct node
