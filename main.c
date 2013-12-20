@@ -75,64 +75,64 @@ struct node
 eval_load(struct node *, struct environment *);
 
 struct variable *
-lookup(struct environment *, struct node);
+lookup(struct environment *, struct node *);
 
 struct environment *
 copy_environment_list(struct environment *);
 
 struct node *
-node_copy(struct node);
+node_copy(struct node *);
 
 struct node *
-node_copy(struct node oldnode)
+node_copy(struct node *oldnode)
 {
     struct node *newnode;
     char *string;
     int i;
     newnode = nalloc();
 
-    switch (oldnode.type) {
+    switch (oldnode->type) {
         case LIST:
             newnode->list = nlistalloc();
-            for (i=0; i < oldnode.nlist; i++) {
-                newnode->list[i] = node_copy(*oldnode.list[i]);
+            for (i=0; i < oldnode->nlist; i++) {
+                newnode->list[i] = node_copy(oldnode->list[i]);
             }
-            newnode->nlist = oldnode.nlist;
+            newnode->nlist = oldnode->nlist;
             break;
         case NUMBER:
-            newnode->number = oldnode.number;
+            newnode->number = oldnode->number;
             break;
         case STRING:
             string = stralloc();
-            strcpy(string, oldnode.string);
+            strcpy(string, oldnode->string);
             newnode->string = string;
             break;
         case SYMBOL:
-            newnode->symbol = oldnode.symbol;
+            newnode->symbol = oldnode->symbol;
             break;
         case PROC:
             newnode->proc = procalloc();
             // env
-            newnode->proc->env = copy_environment_list(oldnode.proc->env);
+            newnode->proc->env = copy_environment_list(oldnode->proc->env);
             // args
-            for (i = 0; i < oldnode.proc->nargs; i++)
-                strcpy(newnode->proc->symbols[i],oldnode.proc->symbols[i]);
-            newnode->proc->nargs = oldnode.proc->nargs;
+            for (i = 0; i < oldnode->proc->nargs; i++)
+                strcpy(newnode->proc->symbols[i],oldnode->proc->symbols[i]);
+            newnode->proc->nargs = oldnode->proc->nargs;
             // body
-            newnode->proc->body = node_copy(*oldnode.proc->body);
+            newnode->proc->body = node_copy(oldnode->proc->body);
             break;
         case PAIR:
             newnode->pair = pairalloc();
-            newnode->pair->car = node_copy(*oldnode.pair->car);
-            newnode->pair->cdr = node_copy(*oldnode.pair->cdr);
+            newnode->pair->car = node_copy(oldnode->pair->car);
+            newnode->pair->cdr = node_copy(oldnode->pair->cdr);
             break;
         case NIL:
             break;
         default:
-            newnode->symbol = oldnode.symbol;
-            printf("remember to update node_copy for type %d\n", oldnode.type);
+            newnode->symbol = oldnode->symbol;
+            printf("remember to update node_copy for type %d\n", oldnode->type);
     }
-    newnode->type = oldnode.type;
+    newnode->type = oldnode->type;
     return newnode;
 }
 
@@ -187,7 +187,7 @@ bind_in_current_env(struct environment *envlist, struct variable var)
     temp.symbol = var.symbol;
 
     // first look it up 
-    look = lookup(envlist, temp);
+    look = lookup(envlist, &temp);
     if (look != &undefinedvar) { 
         // if it already exists, just change the value pointer to the new one
         look->value = var.value;
@@ -205,7 +205,7 @@ bind_in_current_env(struct environment *envlist, struct variable var)
 }
 
 struct variable *
-lookup(struct environment *envlist, struct node expr)
+lookup(struct environment *envlist, struct node *expr)
 {   
     int i, j;
     struct variable *result;
@@ -218,13 +218,13 @@ lookup(struct environment *envlist, struct node expr)
         // scan through varlist until reaching end 
         for (j=0; j < (envlist[i].status - 1); j++) { 
             // if the symbols match, you've found the variable
-            if (strcmp(envlist[i].vars[j].symbol, expr.symbol) == 0) {
+            if (strcmp(envlist[i].vars[j].symbol, expr->symbol) == 0) {
                 result = &(envlist[i].vars[j]);
                 return result;
             }
         }
     }
-    printf("lookup: looked up a nonexistent variable: %s\n", expr.symbol);
+    printf("lookup: looked up a nonexistent variable: %s\n", expr->symbol);
     return &undefinedvar;
 }
 
@@ -232,9 +232,9 @@ struct node
 lookup_value(struct environment *envlist, struct node *expr)
 {
     struct variable *var;
-    var = lookup(envlist, *expr);
+    var = lookup(envlist, expr);
     if (var != &undefinedvar)
-        return *node_copy(*var->value);
+        return *node_copy(var->value);
     else
         return nil_node;
         printf("lookup_value: looked up a nonexistent variable: %s\n", expr->symbol);
@@ -343,8 +343,9 @@ struct node
 eval_setcar(struct node *expr, struct environment *env)
 {
     struct variable *var;
-    var = lookup(env,*expr->list[1]);
-    var->value->pair->car = node_copy(eval(expr->list[2], env));
+    var = lookup(env,expr->list[1]);
+    struct node newcar = eval(expr->list[2], env);
+    var->value->pair->car = node_copy(&newcar);
     return nil_node;
 }
 
@@ -352,8 +353,9 @@ struct node
 eval_setcdr(struct node *expr, struct environment *env)
 {
     struct variable *var;
-    var = lookup(env,*expr->list[1]);
-    var->value->pair->cdr = node_copy(eval(expr->list[2], env));
+    var = lookup(env,expr->list[1]);
+    struct node newcdr = eval(expr->list[2], env);
+    var->value->pair->cdr = node_copy(&newcdr);
     return nil_node;
 }
 
@@ -362,13 +364,14 @@ eval_let(struct node *expr, struct environment *env)
 {
     struct environment *newenv;
     struct variable varlist[expr->list[1]->nlist];
-    struct node body;
+    struct node body, cur;
     newenv = copy_environment_list(env);
     int i;
 
     for (i = 0; i < expr->list[1]->nlist; i++) {
         varlist[i].symbol = expr->list[1]->list[i]->list[0]->symbol;
-        varlist[i].value = node_copy(eval(expr->list[1]->list[i]->list[1], env));
+        cur = eval(expr->list[1]->list[i]->list[1], env);
+        varlist[i].value = node_copy(&cur);
     }
 
     struct node *allocbody;
@@ -380,7 +383,7 @@ eval_let(struct node *expr, struct environment *env)
     body.type = LIST;
     body.list = (expr->list+1);
     body.nlist = expr->nlist-1;
-    allocbody = node_copy(body);
+    allocbody = node_copy(&body);
     // body.list will get gc'd if we don't copy it, since it isn't 
     // actually allocated, it's an allocated_pointer+1
 
@@ -460,7 +463,7 @@ eval_define(struct node *expr, struct environment *env)
         body.nlist = expr->nlist-1;
         body.list = expr->list+1;
 
-        allocbody = node_copy(body); 
+        allocbody = node_copy(&body); 
         // body.list will get gc'd if we don't copy it, since it isn't 
         // actually allocated, it's an allocated_pointer+1
 
@@ -558,7 +561,7 @@ list_to_ll(struct node oldnode)
             curnode->pair->car = list_to_ll(*oldnode.list[i]);
         }
         else
-            curnode->pair->car = node_copy(*oldnode.list[i]);
+            curnode->pair->car = node_copy(oldnode.list[i]);
         curnode->pair->cdr = nextnode;
     }
     nextnode->type = NIL;
@@ -578,7 +581,7 @@ apply_compound(struct node *proc, struct node *args[], int n)
             break;
         }
         varlist[i].symbol = proc->proc->symbols[i];
-        varlist[i].value = node_copy(*args[i]);
+        varlist[i].value = node_copy(args[i]);
     }
     if (dot == 1) {
         struct node restargs;
@@ -605,7 +608,7 @@ create_procedure(char **arglist, int n, struct node body, struct environment *en
     envlist = env;
 
     proc.proc = procalloc();
-    proc.proc->body = node_copy(body);
+    proc.proc->body = node_copy(&body);
     proc.proc->nargs = n;
     for (i = 0; i < n; i++)
         strcpy(proc.proc->symbols[i],arglist[i]);
