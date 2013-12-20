@@ -60,19 +60,19 @@ struct node
 eval_lambda(struct node, struct environment *);
 
 struct node
-eval_delay(struct node, struct environment *);
+eval_delay(struct node *, struct environment *);
 
 struct node
 eval_force(struct node, struct environment *);
 
 struct node
-eval_quote(struct node, struct environment *);
+eval_quote(struct node *, struct environment *);
 
 struct node
 eval_application(struct node, struct environment *);
 
 struct node
-eval_load(struct node, struct environment *);
+eval_load(struct node *, struct environment *);
 
 struct variable *
 lookup(struct environment *, struct node);
@@ -305,10 +305,10 @@ eval(struct node *expr, struct environment *env)
                     return eval_lambda(*expr, env);
                     break;
                 case DELAY:
-                    return eval_delay(*expr, env);
+                    return eval_delay(expr, env);
                     break;
                 case QUOTE:
-                    return eval_quote(*expr, env);
+                    return eval_quote(expr, env);
                     break;
                 case LET:
                     return eval_let(*expr, env);
@@ -320,7 +320,7 @@ eval(struct node *expr, struct environment *env)
                     return eval_setcdr(*expr, env);
                     break;
                 case LOAD:
-                    return eval_load(*expr, env);
+                    return eval_load(expr, env);
                     break;
                 default:
                     return eval_application(*expr, env);
@@ -400,16 +400,15 @@ eval_cond(struct node *expr, struct environment *env)
 }
 
 struct node
-eval_quote(struct node expr, struct environment *env)
+eval_quote(struct node *expr, struct environment *env)
 {
-    return *expr.list[1];
+    return *expr->list[1];
 }
 
 struct node
-eval_delay(struct node expr, struct environment *env)
+eval_delay(struct node *expr, struct environment *env)
 {
-    char **empty;
-    return create_procedure(empty, 0, *expr.list[1], env);
+    return create_procedure(NULL, 0, *expr->list[1], env);
 }
 
 struct node
@@ -477,11 +476,11 @@ eval_define(struct node expr, struct environment *env)
 }
 
 struct node
-eval_load(struct node expr, struct environment *env)
+eval_load(struct node *expr, struct environment *env)
 {
-    if (expr.list[1]->type == STRING) {
+    if (expr->list[1]->type == STRING) {
         char* filename;
-        filename = expr.list[1]->string;
+        filename = expr->list[1]->string;
         eval(parse_file(filename), env);
     }
     return nil_node;
