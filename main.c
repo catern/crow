@@ -22,7 +22,7 @@ eval_setcar(struct node *, struct environment **);
 struct node *
 eval_setcdr(struct node *, struct environment **);
 
-struct node
+struct node *
 apply(struct node *, struct node **, int);
 
 struct node
@@ -58,7 +58,7 @@ eval_force(struct node, struct environment **);
 struct node *
 eval_quote(struct node *, struct environment **);
 
-struct node
+struct node *
 eval_application(struct node *, struct environment **);
 
 struct node *
@@ -312,7 +312,7 @@ eval(struct node *expr, struct environment **env)
                     return *eval_load(expr, env);
                     break;
                 default:
-                    return eval_application(expr, env);
+                    return *eval_application(expr, env);
             }
             break;
         case SYMBOL:
@@ -522,7 +522,7 @@ eval_if(struct node *expr, struct environment **env)
         return eval(expr->list[3], env);
 }
 
-struct node
+struct node *
 eval_application(struct node *expr, struct environment **env)
 {
     struct node proc;
@@ -620,7 +620,7 @@ create_procedure(char **arglist, int n, struct node *body, struct environment **
     return proc;
 }
 
-struct node
+struct node *
 apply(struct node *proc, struct node **args, int n)
 {
     struct node *result = nalloc();
@@ -631,7 +631,7 @@ apply(struct node *proc, struct node **args, int n)
       {
         *result = apply_compound(proc, args, n);
       }
-    return *result;
+    return result;
 }
 
 struct node
@@ -802,7 +802,7 @@ apply_prim(struct node *proc, struct node *args[], int n)
         return *args[n-1];
     }
     else if (!strcmp(proc->symbol,"apply")) {
-        return apply(args[0],(args+1),(n-1));
+        result = apply(args[0],(args+1),(n-1));
     }
     else if (!strcmp(proc->symbol,"listconv")) {
         return *list_to_ll(args[0]);
