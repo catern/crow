@@ -442,24 +442,34 @@ eval_define(struct node *expr, struct environment **env)
           arglist[(i-1)] = tokenalloc();
           strcpy(arglist[(i-1)], expr->list[1]->list[i]->symbol);
         }
+
+        // create node to represent the expressions in the rest of the define
+        struct node *body = nalloc();
+        body->type = LIST;
+        body->list = (expr->list+1);
+        /* body->list = nlistalloc(); */
+
+        // create begin node to put at the beginning of list
         struct node *begin = nalloc();
         begin->type = SYMBOL;
         begin->symbol = tokenalloc();
         strcpy(begin->symbol,"begin");
 
-        expr->list[1] = begin; 
+        body->list[0] = begin; 
+        /* // rest of list is the expressions from the let */
+        /* for (i = 1; i+1 < expr->nlist; i++) { */
+        /*     body->list[i] = expr->list[i+1]; */
+        /* } */
 
-        struct node *body = nalloc();
-        body->type = LIST;
-        body->list = (expr->list+1);
-        body->nlist = expr->nlist-1;
-
+        body->nlist = expr->nlist - 1;
         body = node_copy(body);
         // body.list will get gc'd if we don't copy it, since it isn't 
         // actually allocated, it's an allocated_pointer+1
 
+
         varvalue = create_procedure(arglist, (i - 1), body, env);
         /* bind_in_current_env(varvalue->proc->env, name, varvalue); */
+        // TODO
     }
     else {
         name = expr->list[1]->symbol;
@@ -530,25 +540,25 @@ eval_application(struct node *expr, struct environment **env)
 }
 
 struct node *
-list_to_ll(struct node *oldnode)
+list_to_ll(struct node **nodelist, int n)
 {
-    // this can definitely be made more elegant
     struct node *topnode, *curnode, *nextnode;
     int i;
 
     topnode = nextnode = nalloc();
 
-    for (i = 0; i < oldnode->nlist; i++) {
+    for (i = 0; i < n; i++) {
         curnode = nextnode;
         nextnode = nalloc();
 
         curnode->pair = pairalloc();
         curnode->type = PAIR;
-        if (oldnode->list[i]->type == LIST) {
-            curnode->pair->car = list_to_ll(oldnode->list[i]);
+        if (nodelist[i]->type == LIST) {
+            curnode->pair->car = list_to_ll(nodelist[i]->list, nodelist[i]->nlist);
         }
-        else
-            curnode->pair->car = node_copy(oldnode->list[i]);
+        else {
+            curnode->pair->car = nodelist[i];
+        }
         curnode->pair->cdr = nextnode;
     }
     nextnode->type = NIL;
@@ -569,15 +579,12 @@ apply_compound(struct node *proc, struct node *args[], int n)
         }
         varlist[i] = varalloc();
         varlist[i]->symbol = proc->proc->symbols[i];
-        varlist[i]->value = node_copy(args[i]);
+        varlist[i]->value = args[i];
     }
     if (dot == 1) {
-        struct node restargs;
-        restargs.list = args+i;
-        restargs.nlist = n-i;
         varlist[i] = varalloc();
-        varlist[i]->symbol = proc->proc->symbols[(i+1)];
-        varlist[i]->value = list_to_ll(&restargs);
+        varlist[i]->symbol = proc->proc->symbols[i+1];
+        varlist[i]->value = list_to_ll(args+i, n-i);
         i++;
     }
 
@@ -614,15 +621,12 @@ create_procedure(char **arglist, int n, struct node *body, struct environment **
 struct node *
 apply(struct node *proc, struct node **args, int n)
 {
-    struct node *result;
     if (primitive_proc(proc)) {
-        result = apply_prim(proc, args, n);
+        return apply_prim(proc, args, n);
     }
-    else
-      {
-        result = apply_compound(proc, args, n);
-      }
-    return result;
+    else {
+        return apply_compound(proc, args, n);
+    }
 }
 
 struct node *
@@ -633,7 +637,7 @@ apply_prim(struct node *proc, struct node *args[], int n)
     struct node *result = nalloc();
     result->type = NIL;
     total = 0;
-      // should free(result) in a bunch of these
+      // TODO: should free(result) in a bunch of these
 
     if (proc->symbol[0] == '+') {
         for (i = 0; i < n; i++) {
@@ -796,7 +800,7 @@ apply_prim(struct node *proc, struct node *args[], int n)
         result = apply(args[0],(args+1),(n-1));
     }
     else if (!strcmp(proc->symbol,"listconv")) {
-        result = list_to_ll(args[0]);
+        result = list_to_ll(args, n);
     }
     return result;
 }
