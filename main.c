@@ -17,9 +17,6 @@
 #include "parser.h"
 
 // special nodes
-struct node nil_node = { .type = NIL };
-
-struct variable undefinedvar;
 
 // end special nodes
 
@@ -186,7 +183,7 @@ bind_in_current_env(struct environment *envlist, struct variable var)
 
     // first look it up 
     look = lookup(&temp, envlist);
-    if (look != &undefinedvar) { 
+    if (look != NULL) { 
         // if it already exists, just change the value pointer to the new one
         look->value = var.value;
         return envlist;
@@ -223,7 +220,7 @@ lookup(struct node *expr, struct environment *envlist)
         }
     }
     printf("lookup: looked up a nonexistent variable: %s\n", expr->symbol);
-    return &undefinedvar;
+    return NULL;
 }
 
 struct node
@@ -231,11 +228,14 @@ lookup_value(struct environment *envlist, struct node *expr)
 {
     struct variable *var;
     var = lookup(expr, envlist);
-    if (var != &undefinedvar)
+    if (var != NULL)
         return *node_copy(var->value);
-    else
-        return nil_node;
+    else {
         printf("lookup_value: looked up a nonexistent variable: %s\n", expr->symbol);
+        struct node *result = nalloc();
+        result->type = NIL;
+        return *result;
+    }
 }
 
 
@@ -344,7 +344,9 @@ eval_setcar(struct node *expr, struct environment *env)
     var = lookup(expr->list[1],env);
     struct node newcar = eval(expr->list[2], env);
     var->value->pair->car = node_copy(&newcar);
-    return nil_node;
+    struct node *result = nalloc();
+    result->type = NIL;
+    return *result;
 }
 
 struct node
@@ -354,7 +356,9 @@ eval_setcdr(struct node *expr, struct environment *env)
     var = lookup(expr->list[1],env);
     struct node newcdr = eval(expr->list[2], env);
     var->value->pair->cdr = node_copy(&newcdr);
-    return nil_node;
+    struct node *result = nalloc();
+    result->type = NIL;
+    return *result;
 }
 
 struct node
@@ -482,7 +486,9 @@ eval_load(struct node *expr, struct environment *env)
         filename = expr->list[1]->string;
         eval(parse_file(filename), env);
     }
-    return nil_node;
+    struct node *result = nalloc();
+    result->type = NIL;
+    return *result;
 }
 
 int
@@ -889,8 +895,10 @@ main()
     // the global environment
     struct environment globalenv[MAXENV] = {1, {}};
 
-    // nil is manually bound to the empty list
-    struct variable nilvar = {"nil", &nil_node};
+    struct node *nil = nalloc();
+    nil->type = NIL;
+    // the symbol nil is manually bound to the value nil 
+    struct variable nilvar = {"nil", nil};
     bind_in_current_env(globalenv, nilvar);
 
     // get our defaults
