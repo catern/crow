@@ -54,7 +54,7 @@ struct node
 read_list(void);
 
 struct node
-eval_define(struct node, struct environment *);
+eval_define(struct node *, struct environment *);
 
 struct node
 eval_lambda(struct node *, struct environment *);
@@ -299,7 +299,7 @@ eval(struct node *expr, struct environment *env)
                     return eval_cond(expr, env);
                     break;
                 case DEFINE:
-                    return eval_define(*expr, env);
+                    return eval_define(expr, env);
                     break;
                 case LAMBDA:
                     return eval_lambda(expr, env);
@@ -432,32 +432,32 @@ eval_lambda(struct node *expr, struct environment *env)
 }
 
 struct node
-eval_define(struct node expr, struct environment *env)
+eval_define(struct node *expr, struct environment *env)
 {
     struct variable var;
     struct node *varvalue;
     varvalue = nalloc();
 
-    if (expr.list[1]->type == LIST) {
-        var.symbol = expr.list[1]->list[0]->symbol;
+    if (expr->list[1]->type == LIST) {
+        var.symbol = expr->list[1]->list[0]->symbol;
         var.value = varvalue; 
         bind_in_current_env(env, var);
 
         struct node body;
         char *arglist[MAXVAR];
         int i;
-        for (i = 1; i < expr.list[1]->nlist; i++) {
+        for (i = 1; i < expr->list[1]->nlist; i++) {
           arglist[(i-1)] = tokenalloc();
-          strcpy(arglist[(i-1)], expr.list[1]->list[i]->symbol);
+          strcpy(arglist[(i-1)], expr->list[1]->list[i]->symbol);
         }
         struct node *allocbody;
-        expr.list[1] = nalloc();
-        expr.list[1]->type = SYMBOL;
-        expr.list[1]->symbol = tokenalloc();
-        strcpy(expr.list[1]->symbol,"begin");
+        expr->list[1] = nalloc();
+        expr->list[1]->type = SYMBOL;
+        expr->list[1]->symbol = tokenalloc();
+        strcpy(expr->list[1]->symbol,"begin");
         body.type = LIST;
-        body.nlist = expr.nlist-1;
-        body.list = expr.list+1;
+        body.nlist = expr->nlist-1;
+        body.list = expr->list+1;
 
         allocbody = node_copy(body); 
         // body.list will get gc'd if we don't copy it, since it isn't 
@@ -466,11 +466,11 @@ eval_define(struct node expr, struct environment *env)
         (*varvalue) = create_procedure(arglist, (i - 1), *allocbody, env);
     }
     else {
-        var.symbol = expr.list[1]->symbol;
+        var.symbol = expr->list[1]->symbol;
         var.value = varvalue; 
         bind_in_current_env(env, var);
 
-        (*varvalue) = eval(expr.list[2], env);
+        (*varvalue) = eval(expr->list[2], env);
     }
     return (*varvalue);
 }
