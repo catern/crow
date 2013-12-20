@@ -45,7 +45,7 @@ int gettoken(char *token)
         return c;
 }
 
-struct node
+struct node *
 parse_token()
 {
     /* This is called parse_token, but it's the entirety of the parser.
@@ -56,13 +56,14 @@ parse_token()
     char token[MAXTOKEN];
     int c;
 
-    struct node curnode;
+    struct node *curnode; 
     
     c = gettoken(token);
     if (c == ';') {
         while ((c = getch()) != '\n')
             ;
-        curnode.type = NIL;
+        curnode = nalloc();
+        curnode->type = NIL;
         return curnode;
     }
     else if (c == '(') {
@@ -71,52 +72,48 @@ parse_token()
         int i;
 
         i = 0;
-        while ((curnode = parse_token()).type != NIL) {
-            list[i] = nalloc();
-            *list[i] = curnode;
+        while ((curnode = parse_token())->type != NIL) {
+            list[i] = curnode;
             i++;
         }
 
-        curnode.nlist = i;
-        curnode.type = LIST;
-        curnode.list = list;
+        curnode = nalloc();
+        curnode->nlist = i;
+        curnode->type = LIST;
+        curnode->list = list;
         return curnode;
     }
     else if (c == ')') {
-        curnode.type = NIL;
+        curnode = nalloc();
+        curnode->type = NIL;
         return curnode;
     }
     else if (c == '\"') {
         int i = 0;
-        curnode.string = stralloc();        
+        curnode = nalloc();
+        curnode->type = STRING;
+        curnode->string = stralloc();        
 
         while (((c = getch()) != EOF) && (c != '\"')) {
-            curnode.string[i] = c;
+            curnode->string[i] = c;
             i++;
         }
-        curnode.type = STRING;
-        curnode.string[i] = '\0';
+        curnode->string[i] = '\0';
         return curnode;
     }
      else if (c == '\'') {
-        struct node **list;
-        list = nlistalloc();
 
-        char *quote;
-        quote = tokenalloc();
-        strcpy(quote, "quote");
+        curnode = nalloc();
+        curnode->nlist = 2;
+        curnode->type = LIST;
+        curnode->list = nlistalloc();
 
-        curnode.type = SYMBOL;
-        curnode.symbol = quote;
+        curnode->list[0] = nalloc();
+        curnode->list[0]->type = SYMBOL;
+        curnode->list[0]->symbol = tokenalloc();
+        strcpy(curnode->list[0]->symbol, "quote");
 
-        list[0] = nalloc();
-        *list[0] = curnode;
-        list[1] = nalloc();
-        *list[1] = parse_token();
-
-        curnode.nlist = 2;
-        curnode.type = LIST;
-        curnode.list = list;
+        curnode->list[1] = parse_token();
         return curnode;
     }
     else if (((token[0] == '-' || token[0] == '.') && isdigit(token[1])) || isdigit(token[0])) {
@@ -124,8 +121,9 @@ parse_token()
         double n;
         n = strtod(token, NULL);
 
-        curnode.type = NUMBER;
-        curnode.number = n;
+        curnode = nalloc();
+        curnode->type = NUMBER;
+        curnode->number = n;
         return curnode;
     }
     else {
@@ -134,8 +132,9 @@ parse_token()
         symbol = tokenalloc();
         strcpy(symbol, token);
 
-        curnode.type = SYMBOL;
-        curnode.symbol = symbol;
+        curnode = nalloc();
+        curnode->type = SYMBOL;
+        curnode->symbol = symbol;
         return curnode;
     }
 }
@@ -263,8 +262,7 @@ parse_file(char *filename)
     int i = 1;
     // parses what is currently in the queue
     while (readbufp < readlength) {
-      root->list[i] = nalloc();
-      *(root->list[i++]) = parse_token();
+      root->list[i++] = parse_token();
     }
     root->nlist = i;
     return root;

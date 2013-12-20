@@ -1,7 +1,7 @@
 int getch(void);
 void ungetch(int);
 
-struct node
+struct node *
 parse_token();
 
 struct node *

@@ -841,7 +841,7 @@ read_list()
 main()
 {
     int c;
-    struct node root;
+    struct node *root;
     struct node result;
 
     // the global environment
@@ -864,10 +864,10 @@ main()
             root = parse_token();
 
             // print the unevaled s-exp
-            //print_node(&root);
+            //print_node(root);
 
             // eval the s expression
-            result = eval(&root, globalenv);
+            result = eval(root, globalenv);
 
             // print the resulting s expression
             print_node(&result);
