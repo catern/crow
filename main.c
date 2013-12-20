@@ -33,7 +33,7 @@ struct node
 eval_setcdr(struct node *, struct environment *);
 
 struct node
-apply(struct node, struct node **, int);
+apply(struct node *, struct node **, int);
 
 struct node
 apply_prim(struct node, struct node **, int);
@@ -327,6 +327,7 @@ eval(struct node *expr, struct environment *env)
             }
             break;
         case SYMBOL:
+          // both of these can be a good place TODO next
             if (primitive_proc(expr))
                 return *expr;
             else {
@@ -529,13 +530,13 @@ eval_application(struct node *expr, struct environment *env)
     struct node cur;
     int i;
 
-    for (i = 0; i < expr.nlist; i++) {
+    for (i = 0; i < expr->nlist; i++) {
         cur = eval(expr->list[i], env);
         expr->list[i] = nalloc();
         *expr->list[i] = cur;
     }
 
-    return apply(*expr->list[0], (expr->list+1), (i-1));
+    return apply(expr->list[0], (expr->list+1), (i-1));
 }
 
 struct node *
@@ -614,15 +615,15 @@ create_procedure(char **arglist, int n, struct node body, struct environment *en
 }
 
 struct node
-apply(struct node proc, struct node **args, int n)
+apply(struct node *proc, struct node **args, int n)
 {
     struct node result;
-    if (primitive_proc(&proc)) {
-        result = apply_prim(proc, args, n);
+    if (primitive_proc(proc)) {
+        result = apply_prim(*proc, args, n);
         return result;
     }
     else
-        return apply_compound(proc, args, n);
+        return apply_compound(*proc, args, n);
 }
 
 struct node
@@ -751,7 +752,7 @@ apply_prim(struct node proc, struct node *args[], int n)
         return *args[n-1];
     }
     else if (!strcmp(proc.symbol,"apply")) {
-        return apply(*args[0],(args+1),(n-1));
+        return apply(args[0],(args+1),(n-1));
     }
     else if (!strcmp(proc.symbol,"listconv")) {
         return *list_to_ll(*args[0]);
