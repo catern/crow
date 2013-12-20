@@ -433,7 +433,7 @@ eval_lambda(struct node *expr, struct environment **env)
 struct node *
 eval_define(struct node *expr, struct environment **env)
 {
-    struct node *varvalue = nalloc();
+    struct node *varvalue;
     char *name;
 
     if (expr->list[1]->type == LIST) {
@@ -526,13 +526,13 @@ struct node
 eval_application(struct node *expr, struct environment **env)
 {
     struct node proc;
-    struct node cur;
+    struct node *cur;
     int i;
 
     for (i = 0; i < expr->nlist; i++) {
-        cur = eval(expr->list[i], env);
-        expr->list[i] = nalloc();
-        *expr->list[i] = cur;
+        cur = nalloc();
+        *cur = eval(expr->list[i], env);
+        expr->list[i] = cur;
     }
 
     return apply(expr->list[0], (expr->list+1), (i-1));
