@@ -25,7 +25,7 @@ eval_setcdr(struct node *, struct environment **);
 struct node *
 apply(struct node *, struct node **, int);
 
-struct node
+struct node *
 apply_prim(struct node *, struct node **, int);
 
 struct node *
@@ -215,18 +215,19 @@ lookup(char *symbol, struct environment **envlist)
     return NULL;
 }
 
-struct node
+struct node *
 lookup_value(struct environment **envlist, struct node *expr)
 {
     struct variable *var = lookup(expr->symbol, envlist);
+    struct node *result;
     if (var != NULL)
-        return *node_copy(var->value);
+        result = node_copy(var->value);
     else {
         printf("lookup_value: looked up a nonexistent variable: %s\n", expr->symbol);
-        struct node *result = nalloc();
+        result = nalloc();
         result->type = NIL;
-        return *result;
     }
+    return result;
 }
 
 
@@ -320,7 +321,7 @@ eval(struct node *expr, struct environment **env)
             if (primitive_proc(expr))
                 return *expr;
             else {
-                return lookup_value(env, expr);
+                return *lookup_value(env, expr);
             }
             break;
         default:
@@ -623,18 +624,19 @@ create_procedure(char **arglist, int n, struct node *body, struct environment **
 struct node *
 apply(struct node *proc, struct node **args, int n)
 {
-    struct node *result = nalloc();
+    struct node *result;
     if (primitive_proc(proc)) {
-        *result = apply_prim(proc, args, n);
+        result = apply_prim(proc, args, n);
     }
     else
       {
+        result = nalloc();
         *result = apply_compound(proc, args, n);
       }
     return result;
 }
 
-struct node
+struct node *
 apply_prim(struct node *proc, struct node *args[], int n)
 {
     int i;
@@ -716,10 +718,10 @@ apply_prim(struct node *proc, struct node *args[], int n)
         result->pair = newpair;
     }
     else if (!strcmp(proc->symbol,"car")) {
-        return *args[0]->pair->car;
+        result = node_copy(args[0]->pair->car);
     }
     else if (!strcmp(proc->symbol,"cdr")) {
-        return *args[0]->pair->cdr;
+        result = node_copy(args[0]->pair->cdr);
     }
     else if (!strcmp(proc->symbol,"null?")) {
         if (args[0]->type == NIL)
@@ -799,15 +801,15 @@ apply_prim(struct node *proc, struct node *args[], int n)
         result->type = NIL;
     }
     else if (!strcmp(proc->symbol,"begin")) {
-        return *args[n-1];
+        result = node_copy(args[n-1]);
     }
     else if (!strcmp(proc->symbol,"apply")) {
         result = apply(args[0],(args+1),(n-1));
     }
     else if (!strcmp(proc->symbol,"listconv")) {
-        return *list_to_ll(args[0]);
+        result = list_to_ll(args[0]);
     }
-    return *result;
+    return result;
 }
 
 primitive_proc(struct node *proc)
