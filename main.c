@@ -2,9 +2,6 @@
 /* TODO: 
    gliiiiiiiiiiib
    switch to union types
-   switch to passing pointers around
-//TODO: switch to passing pointers around instead of structs
-//TODO: modify things so apply_proc can modify the environment? maybe?
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -482,7 +479,7 @@ eval_load(struct node *expr, struct environment **env)
     if (expr->list[1]->type == STRING) {
         char* filename;
         filename = expr->list[1]->string;
-        eval(parse_file(filename), env);
+        return eval(parse_file(filename), env);
     }
     struct node *result = nalloc();
     result->type = NIL;
@@ -501,17 +498,17 @@ istrue(struct node *expr, struct environment **env)
 }
 
 int
-node_equal(struct node n1, struct node n2)
+node_equal(struct node *n1, struct node *n2)
 {
-    if (n1.type == SYMBOL && n2.type == SYMBOL) {
-        if (!strcmp(n1.symbol,n2.symbol))
+    if (n1->type == SYMBOL && n2->type == SYMBOL) {
+        if (!strcmp(n1->symbol,n2->symbol))
             return 1;
     }
-    else if (n1.type == NUMBER && n2.type == NUMBER) {
-        if (n1.number == n2.number)
+    else if (n1->type == NUMBER && n2->type == NUMBER) {
+        if (n1->number == n2->number)
             return 1;
     }
-    else if (n1.type == NIL && n2.type == NIL) 
+    else if (n1->type == NIL && n2->type == NIL) 
             return 1;
     return 0;
 }
@@ -778,7 +775,7 @@ apply_prim(struct node *proc, struct node *args[], int n)
     }
     else if (!strcmp(proc->symbol,"eq?")) {
         result->type = NUMBER;
-        result->number = node_equal(*args[0], *args[1]);
+        result->number = node_equal(args[0], args[1]);
     }
     else if (!strcmp(proc->symbol,"display")) {
         if (args[0]->type == SYMBOL) {

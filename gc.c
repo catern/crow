@@ -1,6 +1,3 @@
-/* TODO
-   switch from returning mn to updating a pointer to an mn
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include "types.h"
@@ -51,7 +48,7 @@ garbage_collect(struct environment **env)
     int i, j, usedp = 0;
     void *inuse[MAXPOINTERS];
     usedp = env_pointers(inuse, env, usedp);
-#ifdef DEBUG_GC
+#ifdef DEBUG
     printf("pre-gc nextpointer: %d\n", nextpointer);
 #endif 
     for (i = 0; i < nextpointer; i++) {
@@ -65,7 +62,7 @@ garbage_collect(struct environment **env)
         }
     }
     compress_allocated();
-#ifdef DEBUG_GC
+#ifdef DEBUG
     printf("post-gc nextpointer: %d\n", nextpointer);
 #endif 
 }
