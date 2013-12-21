@@ -61,7 +61,7 @@ gettoken(char *token)
         }
       i++;
     }
-token[i] = '\0';
+  token[i] = '\0';
 }
 
 struct node *
@@ -102,7 +102,7 @@ parse_token()
     }
   else if (token[0] == ')') 
     {
-      return nil_alloc();
+      return NULL;
     }
   else if (token[0] == '\"') 
     {
@@ -158,20 +158,17 @@ struct node *
 parse_list()
 {
   struct node *curnode;
-  struct node **list = nlistalloc();
-  int i;
-
-  i = 0;
-  while ((curnode = parse_token())->type != NIL)
-    {
-      list[i] = curnode;
-      i++;
-    }
-
   struct node *result = nalloc();
   result->type = LIST;
-  result->list = list;
-  result->nlist = i;
+  result->list = nlistalloc();
+
+  int i = 0;
+  while ((result->list[i++] = parse_token()) != NULL)
+    {
+      ;
+    }
+
+  result->nlist = i-1;
   return result;
 }
 
