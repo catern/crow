@@ -99,3 +99,9 @@ symbol_to_node(char *symbol);
 
 struct node *
 string_to_node(char *string);
+
+struct node *
+procedure_to_node(char **args, int n, struct node *body, struct environment **env);
+
+struct node *
+list_to_node(struct node **list, int n);

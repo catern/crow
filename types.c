@@ -80,6 +80,9 @@ nil_alloc()
     return nil;
 }
 
+// constants are copied, strings are copied
+// struct nodes and struct environments, etc are taken as given
+
 struct node *
 bool_to_node(gboolean bool)
 {
@@ -138,5 +141,44 @@ string_to_node(char *string)
   result->string = stralloc();
   strcpy(result->string, string);
 
+  return result;
+}
+
+struct node *
+procedure_to_node(char **args, int n, struct node *body, struct environment **env)
+{
+  struct node *result = nalloc();
+  result->type = PROC;
+  result->proc = procalloc();
+
+  if (args == NULL)
+    {
+      result->proc->symbols = NULL;
+    }
+  else
+    {
+      result->proc->symbols = tokenlistalloc();
+      int i;
+      for (i = 0; i < n; i++) 
+        {
+          result->proc->symbols[i] = tokenalloc();
+          strcpy(result->proc->symbols[i],args[i]);
+        }
+    }
+
+  result->proc->nargs = n;
+  result->proc->body = body;
+  result->proc->env = env;
+
+  return result;
+}
+
+struct node *
+list_to_node(struct node **list, int n)
+{
+  struct node *result = nalloc();
+  result->type = LIST;
+  result->list = list;
+  result->nlist = n;
   return result;
 }

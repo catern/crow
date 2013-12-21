@@ -1,8 +1,7 @@
 /* insert GPLv3+ here */
 /* TODO: 
    gliiiiiiiiiiib
-   switch to union types
-   bool_to_node() for those primitives
+   switch to union types (requires major refactoring)
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,9 +25,6 @@ apply(struct node *, struct node **, int);
 
 struct node *
 apply_prim(struct node *, struct node **, int);
-
-struct node *
-create_procedure(char **, int, struct node *, struct environment **);
 
 struct node *
 eval_if(struct node *, struct environment **);
@@ -78,15 +74,11 @@ node_copy(struct node *oldnode)
   switch (oldnode->type) {
   case LIST:
     {
-      // todo
-      newnode = nalloc();
-      newnode->list = nlistalloc();
+      newnode = list_to_node(nlistalloc(),oldnode->nlist);
       for (i=0; i < oldnode->nlist; i++) 
         {
           newnode->list[i] = node_copy(oldnode->list[i]);
         }
-      newnode->nlist = oldnode->nlist;
-      newnode->type = LIST;
       break;
     }
   case NUMBER:
@@ -106,21 +98,11 @@ node_copy(struct node *oldnode)
     }
   case PROC:
     {
-      // todo
-      newnode = nalloc();
-      newnode->proc = procalloc();
-      // env
-      newnode->proc->env = copy_environment_list(oldnode->proc->env);
-      // args
-      newnode->proc->symbols = tokenlistalloc();
-      for (i = 0; i < oldnode->proc->nargs; i++) {
-        newnode->proc->symbols[i] = tokenalloc();
-        strcpy(newnode->proc->symbols[i],oldnode->proc->symbols[i]);
-      }
-      newnode->proc->nargs = oldnode->proc->nargs;
-      // body
-      newnode->proc->body = node_copy(oldnode->proc->body);
-      newnode->type = PROC;
+      newnode = 
+        procedure_to_node(oldnode->proc->symbols,
+                          oldnode->proc->nargs,
+                          node_copy(oldnode->proc->body),
+                          copy_environment_list(oldnode->proc->env));
       break;
     }
   case PAIR:
@@ -382,9 +364,7 @@ eval_let(struct node *expr, struct environment **env)
     extend_envlist(newenv, varlist, i);
 
     // create node to represent the expressions in the rest of the let
-    struct node *body = nalloc();
-    body->type = LIST;
-    body->list = nlistalloc();
+    struct node *body = list_to_node(nlistalloc(), expr->nlist - 1);
 
     // put begin node at the beginning of list
     body->list[0] = symbol_to_node("begin"); 
@@ -422,7 +402,7 @@ eval_quote(struct node *expr, struct environment **env)
 struct node *
 eval_delay(struct node *expr, struct environment **env)
 {
-    return create_procedure(NULL, 0, expr->list[1], env);
+    return procedure_to_node(NULL, 0, expr->list[1], env);
 }
 
 struct node *
@@ -431,14 +411,13 @@ eval_lambda(struct node *expr, struct environment **env)
   char *arglist[expr->list[1]->nlist];
   int i;
 
-  // copies the tokens from the list in the second position to another array
+  // collects the tokens from the list in the second position in another array
   for (i = 0; i < expr->list[1]->nlist; i++) 
     {
-      arglist[i] = tokenalloc();
-      strcpy(arglist[i], expr->list[1]->list[i]->symbol);
+      arglist[i] = expr->list[1]->list[i]->symbol;
     }
 
-  return create_procedure(arglist, i, expr->list[2], env);
+  return procedure_to_node(arglist, i, expr->list[2], env);
 }
 
 struct node *
@@ -450,17 +429,16 @@ eval_define(struct node *expr, struct environment **env)
   if (expr->list[1]->type == LIST) {
     name = expr->list[1]->list[0]->symbol;
 
-    char *arglist[MAXVAR];
+    // arglist
+    char *arglist[expr->list[1]->nlist - 1];
     int i,j;
-    for (i = 1; i < expr->list[1]->nlist; i++) {
-      arglist[i-1] = tokenalloc();
-      strcpy(arglist[i-1], expr->list[1]->list[i]->symbol);
+    for (i = 0; i+1 < expr->list[1]->nlist; i++) {
+      arglist[i] = expr->list[1]->list[i+1]->symbol;
     }
 
+    // body
     // create node to represent the expressions in the rest of the define
-    struct node *body = nalloc();
-    body->type = LIST;
-    body->list = nlistalloc();
+    struct node *body = list_to_node(nlistalloc(), expr->nlist - 1);
 
     // put begin node at the beginning of list
     body->list[0] = symbol_to_node("begin"); 
@@ -469,13 +447,17 @@ eval_define(struct node *expr, struct environment **env)
     for (j = 1; j+1 < expr->nlist; j++) {
       body->list[j] = expr->list[j+1];
     }
+    
+    // env
+    // lexical
+    /* struct environment **procenv = copy_environment_list(env); */
 
-    body->nlist = expr->nlist - 1;
+    /* varvalue = procedure_to_node(arglist, i, body, procenv); */
 
-    varvalue = create_procedure(arglist, i - 1, body, env);
-    /* bind_in_current_env(varvalue->proc->env, name, varvalue); */
-    // TODO
-    // this special form will be the only one that allows recursion?
+    /* bind_in_current_env(procenv, name, varvalue); */
+    
+    // dynamic
+    varvalue = procedure_to_node(arglist, i, body, env);
   }
   else {
     name = expr->list[1]->symbol;
@@ -600,36 +582,6 @@ apply_compound(struct node *proc, struct node *args[], int n)
     extend_envlist(proc->proc->env, varlist, i);
 
     return eval(proc->proc->body, proc->proc->env);
-}
-
-struct node *
-create_procedure(char **arglist, int n, struct node *body, struct environment **env)
-{
-    struct node *proc;
-    int i = 0;
-    struct environment **envlist;
-
-    /* TODO:
-       the problem is that procedures don't get bound within their own environment
-       possible solution: take a struct environment *** and pass the procedure's env back that way
-    */
-    /* envlist = copy_environment_list(env); */
-    envlist = env;
-
-    proc = nalloc();
-    proc->type = PROC;
-    proc->proc = procalloc();
-
-    proc->proc->env = envlist;
-    proc->proc->body = body;
-    proc->proc->nargs = n;
-    proc->proc->symbols = tokenlistalloc();
-    for (i = 0; i < n; i++) 
-      {
-        proc->proc->symbols[i] = tokenalloc();
-        strcpy(proc->proc->symbols[i],arglist[i]);
-      }
-    return proc;
 }
 
 struct node *
