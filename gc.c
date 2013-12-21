@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <glib.h>
 #include "types.h"
 #include "gc.h"
 
@@ -42,21 +44,40 @@ compress_allocated(void)
     nextpointer = i; // change nextpointer allocation will start with the first null
 }
 
+int
+ptr_compare(uintptr_t a, uintptr_t b)
+{
+  return (a > b) - (a < b);
+}
+
+void
+mark_used(GTree *inusetree, void *pointer)
+{
+    g_tree_insert(inusetree, pointer, (gpointer *) 1);
+}
+
+void
+node_pointers(GTree *inusetree, struct node *expr);
+
+void
+env_pointers(GTree *inusetree,  struct environment **env);
+
+void
+proc_pointers(GTree *inusetree,  struct procedure *proc);
+
 void
 garbage_collect(struct environment **env)
 {
     int i, j, usedp = 0;
     void *inuse[MAXPOINTERS];
-    usedp = env_pointers(inuse, env, usedp);
+    GTree *inusetree = g_tree_new((GCompareFunc) ptr_compare);
+
+    env_pointers(inusetree, env);
 #ifdef DEBUG
     printf("pre-gc nextpointer: %d\n", nextpointer);
 #endif 
     for (i = 0; i < nextpointer; i++) {
-  //      printf("check\n");
-        if (pointer_in_list(inuse, allocated[i], usedp))
-            ;
-        else {
-  //          printf("FREEING GARBAGE! ");
+        if (g_tree_lookup(inusetree, allocated[i]) == NULL) {
             free(allocated[i]);
             allocated[i] = NULL;
         }
@@ -67,142 +88,90 @@ garbage_collect(struct environment **env)
 #endif 
 }
 
-
-int
-pointer_in_list(void *mlist[], void *pointer, int mn)
-{
-    int i;
-
-    for (i = 0; i < mn; i++) {
-        if (mlist[i] == pointer)
-            return 1;
-    }
-    return 0;
-}
-
-/*
-struct environment {
-    int status;
-    struct variable vars[MAXVAR];
-};
-*/
-
-/*
-struct variable {
-    char *symbol;
-    struct node *value;
-};
-*/
-
-int
-env_pointers(void *mlist[], struct environment **env, int mn)
+void
+env_pointers(GTree *inusetree,  struct environment **env)
 {
     int i, j;
 
-    if (pointer_in_list(mlist, (void *) env, mn))
-        return mn;
+    if (g_tree_lookup(inusetree, env) != NULL) {
+        return;
+    }
 
-    mlist[mn++] = env;
+    mark_used(inusetree, env);
 
     for (i = 0; env[i] != NULL; i++) {
-        mlist[mn++] = env[i];
-        mlist[mn++] = env[i]->vars;
-        for (j=0; env[i]->vars[j] != NULL; j++) {
-            mlist[mn++] = env[i]->vars[j];
-            mlist[mn++] = env[i]->vars[j]->symbol;
-            mn = node_pointers(mlist, env[i]->vars[j]->value, mn);
+        mark_used(inusetree, env[i]);
+        mark_used(inusetree, env[i]->vars);
+        for (j = 0; env[i]->vars[j] != NULL; j++) {
+            mark_used(inusetree, env[i]->vars[j]);
+            mark_used(inusetree, env[i]->vars[j]->symbol);
+            node_pointers(inusetree, env[i]->vars[j]->value);
         }
     }
-    return mn;
+    return;
 }
 
-/*
-struct node {
-    int type;
-    char *symbol;
-    double number;
-    struct node *list;
-    struct procedure *proc;
-    struct pair *pair;
-    int nlist;
-    char *string;
-};
-*/
-
-int
-node_pointers(void *mlist[], struct node *expr, int mn)
+void
+node_pointers(GTree *inusetree, struct node *expr)
 {
     int i;
 
-    if (pointer_in_list(mlist, (void *) expr, mn))
-        return mn;
+    if (g_tree_lookup(inusetree, expr) != NULL) {
+        return;
+    }
 
-    mlist[mn++] = expr;
+    mark_used(inusetree, expr);
 
     switch (expr->type) {
         case LIST:
-            mlist[mn++] = expr->list;
+            mark_used(inusetree, expr->list);
             // get the pointers from each node in the list
             for (i=0; i < expr->nlist; i++) {
-                mn = node_pointers(mlist, expr->list[i], mn);
+                node_pointers(inusetree, expr->list[i]);
             }
             break;
         case PROC:
-            mn = proc_pointers(mlist, (expr->proc), mn);
+            proc_pointers(inusetree, expr->proc);
             break;
         case NUMBER:
             // ain't no pointers here!
             break;
         case SYMBOL:
-            mlist[mn++] = expr->symbol;
+            mark_used(inusetree, expr->symbol);
             break;
         case STRING:
-            mlist[mn++] = expr->string;
+            mark_used(inusetree, expr->string);
             break;
         case PAIR:
-            mlist[mn++] = expr->pair;
-            mn = node_pointers(mlist, expr->pair->car, mn);
-            mn = node_pointers(mlist, expr->pair->cdr, mn);
+            mark_used(inusetree, expr->pair);
+            node_pointers(inusetree, expr->pair->car);
+            node_pointers(inusetree, expr->pair->cdr);
             break;
         case NIL:
             break;
         default:
-            mlist[mn++] = expr->symbol;
+            mark_used(inusetree, expr->symbol);
             printf("node_pointers: unknown type %d\n", expr->type);
     }
-
-    return mn;
 }
 
-/*
-struct procedure {
-    char symbols[MAXTOKEN][MAXVAR];
-    struct node body;
-    struct environment *env;
-    int nargs;
-};
-*/
-
-int
-proc_pointers(void *mlist[], struct procedure *proc, int mn)
+void
+proc_pointers(GTree *inusetree,  struct procedure *proc)
 {
     int i;
 
-    if (pointer_in_list(mlist, (void *) proc, mn))
-        return mn;
+    if (g_tree_lookup(inusetree, proc) != NULL) {
+        return;
+    }
 
-    mlist[mn++] = proc;
+    mark_used(inusetree, proc);
 
     // process the body of the proc
-    mn = node_pointers(mlist, proc->body, mn);
+    node_pointers(inusetree, proc->body);
     // process the env of the proc
-    mn = env_pointers(mlist, proc->env, mn);
+    env_pointers(inusetree, proc->env);
     // process the args of the proc 
     for (i=0; i < proc->nargs ; i++) {
-        mlist[mn++] = proc->symbols[i];
+        mark_used(inusetree, proc->symbols[i]);
     }
-        
-
-    return mn;
 }
- 

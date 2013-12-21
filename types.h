@@ -4,9 +4,6 @@
 #define MAXCHARBUF 100
 #define MAXPOINTERS 20000
 
-#define TRUE 1
-#define FALSE 0
-
 #define MAXLIST 50
 
 enum 
