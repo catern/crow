@@ -2,7 +2,6 @@
 #define MAXTOKEN 100
 #define MAXSTRING 1000
 #define MAXCHARBUF 100
-#define MAXPOINTERS 20000
 
 #define MAXLIST 50
 

@@ -16,7 +16,7 @@ malloc_mon(size_t size)
     g_hash_table_add(allocated, alloc);
 
 #ifdef DEBUG
-    if (g_hash_table_size(allocated) > MAXPOINTERS) {
+    if (g_hash_table_size(allocated) > 20000) {
         printf("malloc_mon: Golly that's a lot of pointers!\n");
     }
 #endif
