@@ -69,3 +69,11 @@ varlistalloc()
 {
     return (struct variable **) malloc_mon(sizeof(struct variable *) * MAXVAR);
 }
+
+struct node *
+nil_alloc()
+{
+    struct node *nil = malloc_mon(sizeof(struct node));
+    nil->type = NIL;
+    return nil;
+}

@@ -80,3 +80,6 @@ varalloc();
 
 struct variable **
 varlistalloc();
+
+struct node *
+nil_alloc();
