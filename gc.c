@@ -24,6 +24,14 @@ malloc_mon(size_t size, freefunc ff)
   return alloc;
 }
 
+GString *
+stralloc(char *init)
+{
+  GString *string = g_string_new(init);
+  g_hash_table_replace(allocated, string, &g_string_free);
+  return string;
+}
+
 void
 mark_used(GHashTable *inuse, void *pointer)
 {

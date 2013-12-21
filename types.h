@@ -24,7 +24,7 @@ struct node {
     struct procedure *proc;
     struct pair *pair;
     int nlist;
-    char *string;
+    GString *string;
 };
 
 struct pair {
@@ -63,9 +63,6 @@ tokenalloc();
 
 char **
 tokenlistalloc();
-
-char *
-stralloc();
 
 struct environment *
 envalloc();

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <glib.h>
 #include "types.h"
+#include "gc.h"
 
 char chbuf; /* buffer for input chars */
 gboolean char_waiting = FALSE; 
@@ -169,14 +170,11 @@ parse_string()
   result->type = STRING;
   result->string = stralloc();        
 
-  int c, i = 0;
+  int c = 0;
 
-  while (((c = getch()) != EOF) && (c != '\"')) 
-    {
-      result->string[i] = c;
-      i++;
-    }
-  result->string[i] = '\0';
+  while (((c = getch()) != EOF) && (c != '\"')) {
+    g_string_append_c(result->string, c);
+  }
   return result;
 }
 
@@ -216,11 +214,9 @@ parse_token_ll()
     curnode->string = stralloc();        
 
     while (((c = getch()) != EOF) && (c != '\"')) {
-      curnode->string[i] = c;
-      i++;
+      g_string_append_c(curnode->string, c);
     }
     curnode->type = STRING;
-    curnode->string[i] = '\0';
     return curnode;
   }
   else if (token[0] == '(') {

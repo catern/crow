@@ -88,7 +88,7 @@ node_copy(struct node *oldnode)
     }
   case STRING: 
     {
-      newnode = string_to_node(oldnode->string);
+      newnode = string_to_node(oldnode->string->str);
       break;
     }
   case SYMBOL:
@@ -472,7 +472,7 @@ eval_load(struct node *expr, struct environment **env)
 {
   if (expr->list[1]->type == STRING)
     {
-      char* filename = expr->list[1]->string;
+      char* filename = expr->list[1]->string->str;
       return eval(parse_file(filename), env);
     }
   return nil_alloc();

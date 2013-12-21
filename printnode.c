@@ -46,10 +46,10 @@ minimal_print_node(struct node *expr)
             printf("<pair>");
             break;
         case STRING:
-            printf("%s", expr->string);
+            printf("%s\n", expr->string->str);
             break;
         default:
-            printf("<type: %d>", expr->type);
+            printf("<type: %d>\n", expr->type);
             break;
     }
 }
@@ -88,7 +88,7 @@ print_node(struct node *expr)
         case STRING:
             printf("\033[1;37mType:\033[0m String\n");
             printf("\033[1;37mValue:\033[0m ");
-            printf("%s\n", expr->string);
+            printf("%s\n", expr->string->str);
             break;
         case PAIR:
             printf("\033[1;37mType:\033[0m Pair\n");
