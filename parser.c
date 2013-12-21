@@ -64,41 +64,41 @@ gettoken(char *token)
 token[i] = '\0';
 }
 
-struct node **
-parse_list(int *nlist);
+struct node *
+parse_comment();
 
-char *
+struct node *
+parse_list();
+
+struct node *
 parse_string();
+
+struct node *
+parse_quote();
+
+struct node *
+handle_token(char *token);
 
 struct node *
 parse_token()
 {
-  /* This is called parse_token, but it's the entirety of the parser.
-   * A list is just another kind of "token", defined by parentheses and
-   * some tokens within it.
-   * This parser recursively parses lists when a leftparen is seen,
-   * and ordinary tokens otherwise */
+  /* This is called parse_token, but it should really be called parse,
+     since it's the entry point for the recursive descent parser
+  */
   char token[MAXTOKEN];
   int c;
 
   struct node *curnode; 
     
   gettoken(token);
+
   if (token[0] == ';') 
     {
-      while ((c = getch()) != '\n')
-        ;
-      curnode = nalloc();
-      curnode->type = NIL;
-      return curnode;
+      return parse_comment();
     }
   else if (token[0] == '(') 
     {
-      // separate into separate thing
-      curnode = nalloc();
-      curnode->type = LIST;
-      curnode->list = parse_list(&curnode->nlist);
-      return curnode;
+      return parse_list();
     }
   else if (token[0] == ')') 
     {
@@ -106,55 +106,56 @@ parse_token()
     }
   else if (token[0] == '\"') 
     {
-      // todo glib strings
-      curnode = nalloc();
-      curnode->type = STRING;
-      curnode->string = parse_string();
-      return curnode;
+      return parse_string();
     }
   else if (token[0] == '\'') 
     {
-      curnode = nalloc();
-      curnode->nlist = 2;
-      curnode->type = LIST;
-      curnode->list = nlistalloc();
-
-      curnode->list[0] = nalloc();
-      curnode->list[0]->type = SYMBOL;
-      curnode->list[0]->symbol = tokenalloc();
-      strcpy(curnode->list[0]->symbol, "quote");
-
-      curnode->list[1] = parse_token();
-      return curnode;
-    }
-  else if ((isdigit(token[0])) 
-           || (token[0] == '-' || token[0] == '.') && isdigit(token[1])) 
-    {
-      /* next node will be a number */
-      double n;
-      n = strtod(token, NULL);
-
-      curnode = nalloc();
-      curnode->type = NUMBER;
-      curnode->number = n;
-      return curnode;
+      return parse_quote();
     }
   else 
     {
-    /* next node will be a symbol */
-    char *symbol;
-    symbol = tokenalloc();
-    strcpy(symbol, token);
-
-    curnode = nalloc();
-    curnode->type = SYMBOL;
-    curnode->symbol = symbol;
-    return curnode;
+      return handle_token(token);
     }
 }
 
-struct node **
-parse_list(int *nlist)
+struct node *
+parse_comment()
+{
+  int c;
+  while ((c = getch()) != '\n')
+    ;
+  return nil_alloc();
+}
+
+struct node *
+handle_token(char *token)
+{
+  struct node *result = nalloc();
+  if ((isdigit(token[0])) 
+      || (token[0] == '-' || token[0] == '.') && isdigit(token[1])) 
+    {
+      /* next node will be a number */
+      double n = strtod(token, NULL);
+
+      result->type = NUMBER;
+      result->number = n;
+      return result;
+    }
+  else 
+    {
+      /* next node will be a symbol */
+      char *symbol;
+      symbol = tokenalloc();
+      strcpy(symbol, token);
+
+      result->type = SYMBOL;
+      result->symbol = symbol;
+      return result;
+    }
+}
+
+struct node *
+parse_list()
 {
   struct node *curnode;
   struct node **list = nlistalloc();
@@ -167,27 +168,48 @@ parse_list(int *nlist)
       i++;
     }
 
-  if (nlist != NULL)
-    {
-      *nlist = i;
-    }
-  return list;
+  struct node *result = nalloc();
+  result->type = LIST;
+  result->list = list;
+  result->nlist = i;
+  return result;
 }
 
-char *
+struct node *
 parse_string()
 {
   // todo glib strings
-  char *string = stralloc();        
+  struct node *result = nalloc();
+  result->type = STRING;
+  result->string = stralloc();        
+
   int c, i = 0;
 
   while (((c = getch()) != EOF) && (c != '\"')) 
     {
-      string[i] = c;
+      result->string[i] = c;
       i++;
     }
-  string[i] = '\0';
-  return string;
+  result->string[i] = '\0';
+  return result;
+}
+
+struct node *
+parse_quote()
+{
+  struct node *result = nalloc();
+
+  result->nlist = 2;
+  result->type = LIST;
+  result->list = nlistalloc();
+
+  result->list[0] = nalloc();
+  result->list[0]->type = SYMBOL;
+  result->list[0]->symbol = tokenalloc();
+  strcpy(result->list[0]->symbol, "quote");
+
+  result->list[1] = parse_token();
+  return result;
 }
 
 struct node *
