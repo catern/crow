@@ -28,6 +28,12 @@ tokenalloc()
     return (char *) malloc_mon(sizeof(char[MAXTOKEN]));
 }
 
+char **
+tokenlistalloc()
+{
+  return (char **) malloc_mon(sizeof(char[MAXTOKEN]) * MAXVAR);
+}
+
 char *
 stralloc()
 {

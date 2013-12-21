@@ -3,6 +3,9 @@
 #define MAXSTRING 1000
 #define MAXCHARBUF 100
 
+#define MAXVAR 200
+#define MAXENV 100
+
 #define MAXLIST 50
 
 enum 
@@ -28,9 +31,6 @@ struct pair {
     struct node *cdr;
 };
 
-#define MAXVAR 200
-#define MAXENV 100
-
 struct variable {
     char *symbol;
     struct node *value;
@@ -42,7 +42,7 @@ struct environment {
 };
 
 struct procedure {
-    char symbols[MAXTOKEN][MAXVAR];
+    char **symbols;
     struct node *body;
     struct environment **env;
     int nargs;
@@ -59,6 +59,9 @@ nlistalloc();
 
 char *
 tokenalloc();
+
+char **
+tokenlistalloc();
 
 char *
 stralloc();

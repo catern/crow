@@ -147,6 +147,7 @@ proc_pointers(GHashTable *inuse,  struct procedure *proc)
     // process the env of the proc
     env_pointers(inuse, proc->env);
     // process the args of the proc 
+    mark_used(inuse, proc->symbols);
     for (i=0; i < proc->nargs ; i++) {
         mark_used(inuse, proc->symbols[i]);
     }
