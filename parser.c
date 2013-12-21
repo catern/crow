@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <glib.h>
 #include "types.h"
 
 char chbuf[MAXCHARBUF]; /* buffer for input chars */
@@ -8,7 +9,7 @@ int bufp = 0; /* next free space in chbuf */
 
 char *readbuf; // buffer for reading chars
 int readbufp = 0;
-int readlength = 0;
+size_t readlength = 0;
 
 int getch()
 {
@@ -32,7 +33,7 @@ int gettoken(char *token)
 {
     int c;
 
-    while ((c = getch()) == ' ' || c == '\t' || c == '\n' )
+    while (iswspace((c = getch())))
         ;
     if (c != '(' && c != ')' && c != '\'' && c != '\"' && c != ';') {
         for (*token++ = c; !iswspace(c = getch()) && c != '(' && c != ')'; *token++ = c)
@@ -42,8 +43,12 @@ int gettoken(char *token)
         return 0;
     }
     else
+      {
+        token[0] = c;
         return c;
+      }
 }
+
 
 struct node *
 parse_token()
@@ -237,21 +242,17 @@ parse_token_ll()
 struct node *
 parse_file(char *filename)
 {
-    FILE *readfile;
-    readfile = fopen(filename, "r");
-    if (readfile == NULL) {
-      printf("parse_file: not a valid file: %s\n", filename);
-    }
-    fseek(readfile, 0, SEEK_END); // moves the position where you read from the file right to the end
-    long pos = ftell(readfile); // not sure what ftell is, have to look it up
-    fseek(readfile, 0, SEEK_SET); // moves the reading position to the beginning of the file again
-    readbuf = malloc(pos); // ah, maybe this is getting the length of the file from the end of file position probably
-    fread(readbuf, pos, 1, readfile); 
-    fclose(readfile);
-    readlength = pos - 1;
-    // it's reading the entire file into the char *readbuf
-
     struct node *root = nalloc();
+
+    // reads the entire file into readbuf
+    GError *error;
+    if (!g_file_get_contents(filename, &readbuf, &readlength, &error)) {
+        printf("%s\n", error->message);
+        g_error_free(error);
+        root->type = NIL;
+        return root;
+    }
+
     root->type = LIST;
     root->list = nlistalloc();
     root->list[0] = nalloc(); 
@@ -265,5 +266,6 @@ parse_file(char *filename)
       root->list[i++] = parse_token();
     }
     root->nlist = i;
+    g_free(readbuf);
     return root;
 }

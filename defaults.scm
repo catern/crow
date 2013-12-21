@@ -47,4 +47,3 @@
 (define (sqrt x) (newtons-method (lambda (y) (- (square y) x)) 1.0)) 
 (define (fib n) (cond ((= n 0) 0) ((= n 1) 1) (else (+ (fib (- n 1)) (fib (- n 2))))))
 nil
-

@@ -72,7 +72,6 @@ struct node *
 node_copy(struct node *oldnode)
 {
     struct node *newnode;
-    char *string;
     int i;
     newnode = nalloc();
 
@@ -87,11 +86,12 @@ node_copy(struct node *oldnode)
         case NUMBER:
             newnode->number = oldnode->number;
             break;
-        case STRING:
-            string = stralloc();
+        case STRING: {
+            char *string = stralloc();
             strcpy(string, oldnode->string);
             newnode->string = string;
             break;
+        }
         case SYMBOL:
             newnode->symbol = oldnode->symbol;
             break;
@@ -480,8 +480,7 @@ struct node *
 eval_load(struct node *expr, struct environment **env)
 {
     if (expr->list[1]->type == STRING) {
-        char* filename;
-        filename = expr->list[1]->string;
+        char* filename = expr->list[1]->string;
         return eval(parse_file(filename), env);
     }
     struct node *result = nalloc();
