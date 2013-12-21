@@ -1,3 +1,4 @@
+#include <glib.h>
 
 #define MAXTOKEN 100
 #define MAXSTRING 1000
@@ -83,3 +84,15 @@ varlistalloc();
 
 struct node *
 nil_alloc();
+
+struct node *
+bool_to_node(gboolean bool);
+
+struct node *
+double_to_node(double num);
+
+struct node *
+pair_to_node(struct node *car, struct node *cdr);
+
+struct node *
+symbol_to_node(char *symbol);

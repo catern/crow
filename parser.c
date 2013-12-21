@@ -77,13 +77,12 @@ struct node *
 parse_quote();
 
 struct node *
-handle_token(char *token);
+parse_token(char *token);
 
 struct node *
-parse_token()
+parse()
 {
-  /* This is called parse_token, but it should really be called parse,
-     since it's the entry point for the recursive descent parser
+  /* This is the entry point for the recursive descent parser
   */
   char token[MAXTOKEN];
   int c;
@@ -100,10 +99,6 @@ parse_token()
     {
       return parse_list();
     }
-  else if (token[0] == ')') 
-    {
-      return NULL;
-    }
   else if (token[0] == '\"') 
     {
       return parse_string();
@@ -114,7 +109,7 @@ parse_token()
     }
   else 
     {
-      return handle_token(token);
+      return parse_token(token);
     }
 }
 
@@ -128,29 +123,23 @@ parse_comment()
 }
 
 struct node *
-handle_token(char *token)
+parse_token(char *token)
 {
   struct node *result = nalloc();
-  if ((isdigit(token[0])) 
+  if (token[0] == ')') 
+    {
+      return NULL;
+    }
+  else if ((isdigit(token[0])) 
       || (token[0] == '-' || token[0] == '.') && isdigit(token[1])) 
     {
       /* next node will be a number */
-      double n = strtod(token, NULL);
-
-      result->type = NUMBER;
-      result->number = n;
-      return result;
+      return double_to_node(strtod(token, NULL));
     }
   else 
     {
       /* next node will be a symbol */
-      char *symbol;
-      symbol = tokenalloc();
-      strcpy(symbol, token);
-
-      result->type = SYMBOL;
-      result->symbol = symbol;
-      return result;
+      return symbol_to_node(token);
     }
 }
 
@@ -163,7 +152,7 @@ parse_list()
   result->list = nlistalloc();
 
   int i = 0;
-  while ((result->list[i++] = parse_token()) != NULL)
+  while ((result->list[i++] = parse()) != NULL)
     {
       ;
     }
@@ -205,7 +194,7 @@ parse_quote()
   result->list[0]->symbol = tokenalloc();
   strcpy(result->list[0]->symbol, "quote");
 
-  result->list[1] = parse_token();
+  result->list[1] = parse();
   return result;
 }
 
@@ -325,7 +314,7 @@ parse_file(char *filename)
     int i = 1;
     // parses what is currently in the queue
     while (readbufp < readlength) {
-      root->list[i++] = parse_token();
+      root->list[i++] = parse();
     }
     root->nlist = i;
     g_free(readbuf);

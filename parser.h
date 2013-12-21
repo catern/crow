@@ -2,7 +2,7 @@ int getch(void);
 void ungetch(int);
 
 struct node *
-parse_token();
+parse();
 
 struct node *
 parse_token_ll();

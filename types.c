@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#include <glib.h>
+#include <string.h>
 #include "types.h"
 #include "gc.h"
 
@@ -76,4 +78,54 @@ nil_alloc()
     struct node *nil = malloc_mon(sizeof(struct node));
     nil->type = NIL;
     return nil;
+}
+
+struct node *
+bool_to_node(gboolean bool)
+{
+  struct node *result = nalloc();
+  result->type = NUMBER;
+
+  if (bool)
+    {
+      result->number = 1;
+    }
+  else 
+    {
+      result->number = 0;
+    }
+
+  return result;
+}
+
+struct node *
+double_to_node(double num)
+{
+  struct node *result = nalloc();
+  result->type = NUMBER;
+  result->number = num;
+
+  return result;
+}
+
+struct node *
+pair_to_node(struct node *car, struct node *cdr)
+{
+  struct node *result = nalloc();
+  result->type = PAIR;
+  result->pair = pairalloc();
+  result->pair->car = car;
+  result->pair->cdr = cdr;
+  return result;
+}
+
+struct node *
+symbol_to_node(char *symbol)
+{
+  struct node *result = nalloc();
+  result->type = SYMBOL;
+  result->symbol = tokenalloc();
+  strcpy(result->symbol, symbol);
+
+  return result;
 }

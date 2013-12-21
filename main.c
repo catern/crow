@@ -649,45 +649,6 @@ apply(struct node *proc, struct node **args, int n)
 }
 
 struct node *
-bool_to_node(gboolean bool)
-{
-  struct node *result = nalloc();
-  result->type = NUMBER;
-
-  if (bool)
-    {
-      result->number = 1;
-    }
-  else 
-    {
-      result->number = 0;
-    }
-
-  return result;
-}
-
-struct node *
-double_to_node(double num)
-{
-  struct node *result = nalloc();
-  result->type = NUMBER;
-  result->number = num;
-
-  return result;
-}
-
-struct node *
-pair_to_node(struct node *car, struct node *cdr)
-{
-  struct node *result = nalloc();
-  result->type = PAIR;
-  result->pair = pairalloc();
-  result->pair->car = car;
-  result->pair->cdr = cdr;
-  return result;
-}
-
-struct node *
 apply_prim(struct node *proc, struct node *args[], int n)
 {
     int i;
@@ -910,13 +871,14 @@ main()
     eval(parse_file("defaults.scm"), globalenv);
     /* eval(parse_file("example.scm"), globalenv); */
 
+    printf(">>");
     while ((c = getch()) != EOF) {
         if (!iswspace(c)) {
             ungetch(c);
 
             /* // parse our input */
             /* // and get the root of the resulting s expression */
-            /* struct node *root = parse_token(); */
+            /* struct node *root = parse(); */
 
             /* // print the unevaled s-exp */
             /* //print_node(root); */
@@ -928,7 +890,7 @@ main()
             /* print_node(result); */
             
             // do it all
-            print_node(eval(parse_token(), globalenv));
+            print_node(eval(parse(), globalenv));
 
             // free pointers that cannot be accessed
             garbage_collect(globalenv);
