@@ -5,43 +5,23 @@
 #include "types.h"
 #include "gc.h"
 
-void *allocated[MAXPOINTERS];
-int nextpointer = 0;
+GHashTable *allocated = NULL;
 
 void *
 malloc_mon(size_t size)
 {
-#ifdef DEBUG_GC
-    printf("malloc: nextpoiner: %d\n", nextpointer);
-#endif
-    if (nextpointer < MAXPOINTERS) {
-        allocated[nextpointer] = calloc(1, size);
-        return allocated[nextpointer++];
-    }
-    else {
-        printf("malloc_mon: Golly that's a lot of pointers!\n");
-        return calloc(1, size);
-    }
-}
+    if (allocated == NULL) allocated = g_hash_table_new(NULL, NULL);
 
-void
-compress_allocated(void)
-{
-    int i, j;
-    for (i = 0; i < nextpointer; i++) { // search through all the possibly allocated pointers
-        if (allocated[i]==NULL) { // if we find a null pointer
-            for (j = i; j < nextpointer; j++) { // search the space past it
-                if (allocated[j] != NULL) { // for a non-null pointer
-                    allocated[i] = allocated[j]; // put the non-null pointer in the null space
-                    allocated[j] = NULL; // mark the non-null's former space as free
-                    break; // go back to searching for null pointers
-                }
-            }
-        }
+    void *alloc = calloc(1, size);
+    g_hash_table_add(allocated, alloc);
+
+#ifdef DEBUG
+    if (g_hash_table_size(allocated) > MAXPOINTERS) {
+        printf("malloc_mon: Golly that's a lot of pointers!\n");
     }
-    for (i = 0; allocated[i] != NULL; i++) // find the first null
-        ;
-    nextpointer = i; // change nextpointer allocation will start with the first null
+#endif
+
+    return alloc;
 }
 
 void
@@ -60,24 +40,27 @@ void
 proc_pointers(GHashTable *inuse,  struct procedure *proc);
 
 void
+free_if_not(gpointer key, gpointer value, gpointer hashtable) 
+{
+  if (!g_hash_table_contains(hashtable, key)) free(key);
+}
+
+void
 garbage_collect(struct environment **env)
 {
-    int i = 0;
-    GHashTable *inuse = g_hash_table_new(NULL, NULL);
-
-    env_pointers(inuse, env);
 #ifdef DEBUG
-    printf("pre-gc nextpointer: %d\n", nextpointer);
+    printf("pre-gc # of pointers: %d\n", g_hash_table_size(allocated));
 #endif 
-    for (i = 0; i < nextpointer; i++) {
-        if (!g_hash_table_contains(inuse, allocated[i])) {
-            free(allocated[i]);
-            allocated[i] = NULL;
-        }
-    }
-    compress_allocated();
+    GHashTable *inuse = g_hash_table_new(NULL, NULL);
+    env_pointers(inuse, env);
+
+    g_hash_table_foreach(allocated, free_if_not, inuse);
+
+    g_hash_table_destroy(allocated);
+
+    allocated = inuse;
 #ifdef DEBUG
-    printf("post-gc nextpointer: %d\n", nextpointer);
+    printf("post-gc # of pointers: %d\n", g_hash_table_size(allocated));
 #endif 
 }
 
