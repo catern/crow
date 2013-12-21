@@ -129,3 +129,14 @@ symbol_to_node(char *symbol)
 
   return result;
 }
+
+struct node *
+string_to_node(char *string)
+{
+  struct node *result = nalloc();
+  result->type = STRING;
+  result->string = stralloc();
+  strcpy(result->string, string);
+
+  return result;
+}

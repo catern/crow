@@ -72,57 +72,74 @@ node_copy(struct node *);
 struct node *
 node_copy(struct node *oldnode)
 {
-    struct node *newnode;
-    int i;
-    newnode = nalloc();
+  struct node *newnode;
+  int i;
 
-    switch (oldnode->type) {
-        case LIST:
-            newnode->list = nlistalloc();
-            for (i=0; i < oldnode->nlist; i++) {
-                newnode->list[i] = node_copy(oldnode->list[i]);
-            }
-            newnode->nlist = oldnode->nlist;
-            break;
-        case NUMBER:
-            newnode->number = oldnode->number;
-            break;
-        case STRING: {
-            char *string = stralloc();
-            strcpy(string, oldnode->string);
-            newnode->string = string;
-            break;
+  switch (oldnode->type) {
+  case LIST:
+    {
+      // todo
+      newnode = nalloc();
+      newnode->list = nlistalloc();
+      for (i=0; i < oldnode->nlist; i++) 
+        {
+          newnode->list[i] = node_copy(oldnode->list[i]);
         }
-        case SYMBOL:
-            newnode->symbol = oldnode->symbol;
-            break;
-        case PROC:
-            newnode->proc = procalloc();
-            // env
-            newnode->proc->env = copy_environment_list(oldnode->proc->env);
-            // args
-            newnode->proc->symbols = tokenlistalloc();
-            for (i = 0; i < oldnode->proc->nargs; i++) {
-                newnode->proc->symbols[i] = tokenalloc();
-                strcpy(newnode->proc->symbols[i],oldnode->proc->symbols[i]);
-            }
-            newnode->proc->nargs = oldnode->proc->nargs;
-            // body
-            newnode->proc->body = node_copy(oldnode->proc->body);
-            break;
-        case PAIR:
-            newnode->pair = pairalloc();
-            newnode->pair->car = node_copy(oldnode->pair->car);
-            newnode->pair->cdr = node_copy(oldnode->pair->cdr);
-            break;
-        case NIL:
-            break;
-        default:
-            newnode->symbol = oldnode->symbol;
-            printf("remember to update node_copy for type %d\n", oldnode->type);
+      newnode->nlist = oldnode->nlist;
+      newnode->type = LIST;
+      break;
     }
-    newnode->type = oldnode->type;
-    return newnode;
+  case NUMBER:
+    {
+      newnode = double_to_node(oldnode->number);
+      break;
+    }
+  case STRING: 
+    {
+      newnode = string_to_node(oldnode->string);
+      break;
+    }
+  case SYMBOL:
+    {
+      newnode = symbol_to_node(oldnode->symbol);
+      break;
+    }
+  case PROC:
+    {
+      // todo
+      newnode = nalloc();
+      newnode->proc = procalloc();
+      // env
+      newnode->proc->env = copy_environment_list(oldnode->proc->env);
+      // args
+      newnode->proc->symbols = tokenlistalloc();
+      for (i = 0; i < oldnode->proc->nargs; i++) {
+        newnode->proc->symbols[i] = tokenalloc();
+        strcpy(newnode->proc->symbols[i],oldnode->proc->symbols[i]);
+      }
+      newnode->proc->nargs = oldnode->proc->nargs;
+      // body
+      newnode->proc->body = node_copy(oldnode->proc->body);
+      newnode->type = PROC;
+      break;
+    }
+  case PAIR:
+    {
+      newnode = pair_to_node(node_copy(oldnode->pair->car), node_copy(oldnode->pair->cdr));
+      break;
+    }
+  case NIL:
+    {
+      newnode = nil_alloc();
+      break;
+    }
+  default:
+    {
+      newnode = oldnode;
+      printf("remember to update node_copy for type %d\n", oldnode->type);
+    }
+  }
+  return newnode;
 }
 
 
@@ -369,12 +386,8 @@ eval_let(struct node *expr, struct environment **env)
     body->type = LIST;
     body->list = nlistalloc();
 
-    // create begin node to put at the beginning of list
-    struct node *begin = nalloc();
-    begin->type = SYMBOL;
-    begin->symbol = tokenalloc();
-    strcpy(begin->symbol,"begin");
-    body->list[0] = begin; 
+    // put begin node at the beginning of list
+    body->list[0] = symbol_to_node("begin"); 
 
     // rest of list is the expressions from the let
     for (i = 1; i+1 < expr->nlist; i++) {
@@ -449,13 +462,8 @@ eval_define(struct node *expr, struct environment **env)
     body->type = LIST;
     body->list = nlistalloc();
 
-    // create begin node to put at the beginning of list
-    struct node *begin = nalloc();
-    begin->type = SYMBOL;
-    begin->symbol = tokenalloc();
-    strcpy(begin->symbol,"begin");
-
-    body->list[0] = begin; 
+    // put begin node at the beginning of list
+    body->list[0] = symbol_to_node("begin"); 
 
     // rest of list is the expressions from the let
     for (j = 1; j+1 < expr->nlist; j++) {
@@ -553,27 +561,16 @@ list_to_ll(struct node **nodelist, int n)
 {
     struct node *topnode, *curnode, *nextnode;
     int i;
+    
+    if (n == 0) return nil_alloc();
 
-    topnode = nextnode = nalloc();
-
-    for (i = 0; i < n; i++) 
+    topnode = curnode = pair_to_node(nodelist[0], NULL);
+    for (i = 1; i < n; i++) 
       {
-        curnode = nextnode;
-        nextnode = nalloc();
-
-        curnode->pair = pairalloc();
-        curnode->type = PAIR;
-        if (nodelist[i]->type == LIST) 
-          {
-            curnode->pair->car = list_to_ll(nodelist[i]->list, nodelist[i]->nlist);
-          }
-        else 
-          {
-            curnode->pair->car = nodelist[i];
-          }
-        curnode->pair->cdr = nextnode;
+        curnode->pair->cdr = pair_to_node(nodelist[i], NULL);
+        curnode = curnode->pair->cdr;
       }
-    nextnode->type = NIL;
+    curnode->pair->cdr = nil_alloc();
     return topnode;
 }
 

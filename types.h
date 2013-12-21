@@ -96,3 +96,6 @@ pair_to_node(struct node *car, struct node *cdr);
 
 struct node *
 symbol_to_node(char *symbol);
+
+struct node *
+string_to_node(char *string);
