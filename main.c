@@ -100,7 +100,9 @@ node_copy(struct node *oldnode)
             // env
             newnode->proc->env = copy_environment_list(oldnode->proc->env);
             // args
+            newnode->proc->symbols = tokenlistalloc();
             for (i = 0; i < oldnode->proc->nargs; i++) {
+                newnode->proc->symbols[i] = tokenalloc();
                 strcpy(newnode->proc->symbols[i],oldnode->proc->symbols[i]);
             }
             newnode->proc->nargs = oldnode->proc->nargs;
@@ -608,8 +610,11 @@ create_procedure(char **arglist, int n, struct node *body, struct environment **
     proc->proc->env = envlist;
     proc->proc->body = body;
     proc->proc->nargs = n;
-    for (i = 0; i < n; i++)
+    proc->proc->symbols = tokenlistalloc();
+    for (i = 0; i < n; i++) {
+        proc->proc->symbols[i] = tokenalloc();
         strcpy(proc->proc->symbols[i],arglist[i]);
+    }
     return proc;
 }
 
