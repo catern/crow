@@ -44,40 +44,33 @@ compress_allocated(void)
     nextpointer = i; // change nextpointer allocation will start with the first null
 }
 
-int
-ptr_compare(uintptr_t a, uintptr_t b)
+void
+mark_used(GHashTable *inuse, void *pointer)
 {
-  return (a > b) - (a < b);
+    g_hash_table_add(inuse, pointer);
 }
 
 void
-mark_used(GTree *inusetree, void *pointer)
-{
-    g_tree_insert(inusetree, pointer, (gpointer *) 1);
-}
+node_pointers(GHashTable *inuse, struct node *expr);
 
 void
-node_pointers(GTree *inusetree, struct node *expr);
+env_pointers(GHashTable *inuse,  struct environment **env);
 
 void
-env_pointers(GTree *inusetree,  struct environment **env);
-
-void
-proc_pointers(GTree *inusetree,  struct procedure *proc);
+proc_pointers(GHashTable *inuse,  struct procedure *proc);
 
 void
 garbage_collect(struct environment **env)
 {
-    int i, j, usedp = 0;
-    void *inuse[MAXPOINTERS];
-    GTree *inusetree = g_tree_new((GCompareFunc) ptr_compare);
+    int i = 0;
+    GHashTable *inuse = g_hash_table_new(NULL, NULL);
 
-    env_pointers(inusetree, env);
+    env_pointers(inuse, env);
 #ifdef DEBUG
     printf("pre-gc nextpointer: %d\n", nextpointer);
 #endif 
     for (i = 0; i < nextpointer; i++) {
-        if (g_tree_lookup(inusetree, allocated[i]) == NULL) {
+        if (!g_hash_table_contains(inuse, allocated[i])) {
             free(allocated[i]);
             allocated[i] = NULL;
         }
@@ -89,89 +82,89 @@ garbage_collect(struct environment **env)
 }
 
 void
-env_pointers(GTree *inusetree,  struct environment **env)
+env_pointers(GHashTable *inuse,  struct environment **env)
 {
     int i, j;
 
-    if (g_tree_lookup(inusetree, env) != NULL) {
+    if (g_hash_table_contains(inuse, env)) {
         return;
     }
 
-    mark_used(inusetree, env);
+    mark_used(inuse, env);
 
     for (i = 0; env[i] != NULL; i++) {
-        mark_used(inusetree, env[i]);
-        mark_used(inusetree, env[i]->vars);
+        mark_used(inuse, env[i]);
+        mark_used(inuse, env[i]->vars);
         for (j = 0; env[i]->vars[j] != NULL; j++) {
-            mark_used(inusetree, env[i]->vars[j]);
-            mark_used(inusetree, env[i]->vars[j]->symbol);
-            node_pointers(inusetree, env[i]->vars[j]->value);
+            mark_used(inuse, env[i]->vars[j]);
+            mark_used(inuse, env[i]->vars[j]->symbol);
+            node_pointers(inuse, env[i]->vars[j]->value);
         }
     }
     return;
 }
 
 void
-node_pointers(GTree *inusetree, struct node *expr)
+node_pointers(GHashTable *inuse, struct node *expr)
 {
     int i;
 
-    if (g_tree_lookup(inusetree, expr) != NULL) {
+    if (g_hash_table_contains(inuse, expr)) {
         return;
     }
 
-    mark_used(inusetree, expr);
+    mark_used(inuse, expr);
 
     switch (expr->type) {
         case LIST:
-            mark_used(inusetree, expr->list);
+            mark_used(inuse, expr->list);
             // get the pointers from each node in the list
             for (i=0; i < expr->nlist; i++) {
-                node_pointers(inusetree, expr->list[i]);
+                node_pointers(inuse, expr->list[i]);
             }
             break;
         case PROC:
-            proc_pointers(inusetree, expr->proc);
+            proc_pointers(inuse, expr->proc);
             break;
         case NUMBER:
             // ain't no pointers here!
             break;
         case SYMBOL:
-            mark_used(inusetree, expr->symbol);
+            mark_used(inuse, expr->symbol);
             break;
         case STRING:
-            mark_used(inusetree, expr->string);
+            mark_used(inuse, expr->string);
             break;
         case PAIR:
-            mark_used(inusetree, expr->pair);
-            node_pointers(inusetree, expr->pair->car);
-            node_pointers(inusetree, expr->pair->cdr);
+            mark_used(inuse, expr->pair);
+            node_pointers(inuse, expr->pair->car);
+            node_pointers(inuse, expr->pair->cdr);
             break;
         case NIL:
             break;
         default:
-            mark_used(inusetree, expr->symbol);
+            mark_used(inuse, expr->symbol);
             printf("node_pointers: unknown type %d\n", expr->type);
     }
 }
 
 void
-proc_pointers(GTree *inusetree,  struct procedure *proc)
+proc_pointers(GHashTable *inuse,  struct procedure *proc)
 {
     int i;
 
-    if (g_tree_lookup(inusetree, proc) != NULL) {
+    if (g_hash_table_contains(inuse, proc)) {
         return;
     }
 
-    mark_used(inusetree, proc);
+    mark_used(inuse, proc);
 
     // process the body of the proc
-    node_pointers(inusetree, proc->body);
+    node_pointers(inuse, proc->body);
     // process the env of the proc
-    env_pointers(inusetree, proc->env);
+    env_pointers(inuse, proc->env);
     // process the args of the proc 
     for (i=0; i < proc->nargs ; i++) {
-        mark_used(inusetree, proc->symbols[i]);
+        mark_used(inuse, proc->symbols[i]);
     }
 }
