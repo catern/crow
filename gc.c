@@ -7,41 +7,47 @@
 GHashTable *allocated = NULL;
 
 void *
-malloc_mon(size_t size)
+malloc_mon(size_t size, freefunc ff)
 {
-    if (allocated == NULL) allocated = g_hash_table_new(NULL, NULL);
+  if (allocated == NULL) allocated = g_hash_table_new(NULL, NULL);
 
-    void *alloc = calloc(1, size);
-    g_hash_table_add(allocated, alloc);
+  void *alloc = calloc(1, size);
+  g_hash_table_replace(allocated, alloc, ff);
 
 #ifdef DEBUG
-    if (g_hash_table_size(allocated) > 20000) {
-        printf("malloc_mon: Golly that's a lot of pointers!\n");
+  if (g_hash_table_size(allocated) > 20000) 
+    {
+      printf("malloc_mon: Golly that's a lot of pointers!\n");
     }
 #endif
 
-    return alloc;
+  return alloc;
 }
 
 void
 mark_used(GHashTable *inuse, void *pointer)
 {
-    g_hash_table_add(inuse, pointer);
+  g_hash_table_add(inuse, pointer);
 }
 
 void
 node_pointers(GHashTable *inuse, struct node *expr);
 
 void
-env_pointers(GHashTable *inuse,  struct environment **env);
+env_pointers(GHashTable *inuse, struct environment **env);
 
 void
-proc_pointers(GHashTable *inuse,  struct procedure *proc);
+proc_pointers(GHashTable *inuse, struct procedure *proc);
 
-void
-free_if_not(gpointer key, gpointer value, gpointer hashtable) 
+gboolean
+free_if_not(gpointer key, gpointer ff, gpointer inuse) 
 {
-  if (!g_hash_table_contains(hashtable, key)) free(key);
+  if (!g_hash_table_contains(inuse, key)) 
+    {
+      ((freefunc) ff)(key);
+      return TRUE;
+    }
+  return FALSE;
 }
 
 void
@@ -53,11 +59,10 @@ garbage_collect(struct environment **env)
     GHashTable *inuse = g_hash_table_new(NULL, NULL);
     env_pointers(inuse, env);
 
-    g_hash_table_foreach(allocated, free_if_not, inuse);
+    g_hash_table_foreach_remove(allocated, free_if_not, inuse);
 
-    g_hash_table_destroy(allocated);
+    g_hash_table_destroy(inuse);
 
-    allocated = inuse;
 #ifdef DEBUG
     printf("post-gc # of pointers: %d\n", g_hash_table_size(allocated));
 #endif 

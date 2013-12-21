@@ -7,77 +7,77 @@
 struct pair *
 pairalloc()
 {
-    return (struct pair *) malloc_mon(sizeof(struct pair));
+  return (struct pair *) malloc_mon(sizeof(struct pair), &free);
 }
 
 struct node *
 nalloc()
 {
-    return (struct node *) malloc_mon(sizeof(struct node));
+  return (struct node *) malloc_mon(sizeof(struct node), &free);
 }
 
 struct node **
 nlistalloc()
 {
-    struct node **nlist = (struct node **) 
-      malloc_mon(sizeof(struct node *) * MAXLIST);
-    return nlist;
+  struct node **nlist = (struct node **) 
+    malloc_mon(sizeof(struct node *) * MAXLIST, &free);
+  return nlist;
 }
 
 char *
 tokenalloc()
 {
-    return (char *) malloc_mon(sizeof(char[MAXTOKEN]));
+  return (char *) malloc_mon(sizeof(char[MAXTOKEN]), &free);
 }
 
 char **
 tokenlistalloc()
 {
-  return (char **) malloc_mon(sizeof(char[MAXTOKEN]) * MAXVAR);
+  return (char **) malloc_mon(sizeof(char[MAXTOKEN]) * MAXVAR, &free);
 }
 
 char *
 stralloc()
 {
-    return (char *) malloc_mon(sizeof(char[MAXSTRING]));
+  return (char *) malloc_mon(sizeof(char[MAXSTRING]), &free);
 }
 
 struct environment *
 envalloc()
 {
-    return (struct environment *) malloc_mon(sizeof(struct environment));
+  return (struct environment *) malloc_mon(sizeof(struct environment), &free);
 }
 
 struct environment **
 envlistalloc()
 {
-    return (struct environment **) malloc_mon(sizeof(struct environment *) * MAXENV);
+  return (struct environment **) malloc_mon(sizeof(struct environment *) * MAXENV, &free);
 }
 
 struct procedure *
 procalloc()
 {
-    return (struct procedure *) malloc_mon(sizeof(struct procedure));
+  return (struct procedure *) malloc_mon(sizeof(struct procedure), &free);
 }
 
 struct variable *
 varalloc()
 {
-    return (struct variable *) malloc_mon(sizeof(struct variable));
+  return (struct variable *) malloc_mon(sizeof(struct variable), &free);
 }
 
 struct variable **
 varlistalloc()
 {
-    return (struct variable **) malloc_mon(sizeof(struct variable *) * MAXVAR);
+  return (struct variable **) malloc_mon(sizeof(struct variable *) * MAXVAR, &free);
 }
 
 struct node *
 nil_alloc()
 {
-    struct node *nil = malloc_mon(sizeof(struct node));
-    nil->type = NIL;
-    return nil;
+  struct node *nil = malloc_mon(sizeof(struct node), &free);
+  nil->type = NIL;
+  return nil;
 }
 
 // constants are copied, strings are copied
