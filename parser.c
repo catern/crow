@@ -4,51 +4,69 @@
 #include <glib.h>
 #include "types.h"
 
-char chbuf[MAXCHARBUF]; /* buffer for input chars */
-int bufp = 0; /* next free space in chbuf */
+int *chbuf; /* buffer for input chars */
+gboolean char_waiting = FALSE; 
 
 char *readbuf; // buffer for reading chars
-int readbufp = 0;
+size_t readbufp = 0;
 size_t readlength = 0;
 
 int getch()
 {
-    if (bufp > 0)
-        return (int) chbuf[--bufp];
-    else if (readbufp < readlength)
-        return (int) readbuf[readbufp++];
-    else
-        return getchar();
+  if (char_waiting)
+    {
+      char_waiting = FALSE;
+      return (int) *chbuf;
+}
+  else if (readbufp < readlength)
+    {
+      return (int) readbuf[readbufp++];
+    }
+  else
+    {
+      return getchar();
+    }
 }
 
 void ungetch(int c)
 {
-    if (bufp >= MAXCHARBUF)
-        printf("ungetch: char buffer overflow\n");
-    else
-        chbuf[bufp++] = c;
+  *chbuf = c;
+  char_waiting = TRUE;
 }
 
-int gettoken(char *token)
+void
+gettoken(char *token)
 {
-    int c;
-
-    while (iswspace((c = getch())))
-        ;
-    if (c != '(' && c != ')' && c != '\'' && c != '\"' && c != ';') {
-        for (*token++ = c; !iswspace(c = getch()) && c != '(' && c != ')'; *token++ = c)
-            ;
-        *token = '\0';
-        ungetch(c); /* the token ended but we went one char too far */
-        return 0;
+  int c;
+  while (iswspace((c = getch()))) 
+    {
+      ;
     }
-    else
-      {
-        token[0] = c;
-        return c;
-      }
-}
 
+  token[0] = c;
+  if (c == '(' || c == ')' || c == '\'' || c == '\"' || c == ';') 
+    {
+      token[1] = '\0';
+      return;
+    }
+
+  int i = 1;
+  while (!iswspace(c = getch())) 
+    {
+      if (c == '(' || c == ')' || c == '\'' || c == '\"' || c == ';') 
+        {
+          ungetch(c);
+          token[i] = '\0';
+          return;
+        }
+      else 
+        {
+          token[i] = c;
+        }
+      i++;
+    }
+  token[i] = '\0';
+}
 
 struct node *
 parse_token()
@@ -63,15 +81,15 @@ parse_token()
 
     struct node *curnode; 
     
-    c = gettoken(token);
-    if (c == ';') {
+    gettoken(token);
+    if (token[0] == ';') {
         while ((c = getch()) != '\n')
             ;
         curnode = nalloc();
         curnode->type = NIL;
         return curnode;
     }
-    else if (c == '(') {
+    else if (token[0] == '(') {
         struct node **list;
         list = nlistalloc();
         int i;
@@ -88,12 +106,12 @@ parse_token()
         curnode->list = list;
         return curnode;
     }
-    else if (c == ')') {
+    else if (token[0] == ')') {
         curnode = nalloc();
         curnode->type = NIL;
         return curnode;
     }
-    else if (c == '\"') {
+    else if (token[0] == '\"') {
         int i = 0;
         curnode = nalloc();
         curnode->type = STRING;
@@ -106,7 +124,7 @@ parse_token()
         curnode->string[i] = '\0';
         return curnode;
     }
-     else if (c == '\'') {
+     else if (token[0] == '\'') {
 
         curnode = nalloc();
         curnode->nlist = 2;
@@ -155,8 +173,8 @@ parse_token_ll()
     struct node *curnode;
     struct node *nextnode;
     
-    c = gettoken(token);
-    if (c == '\"') {
+    gettoken(token);
+    if (token[0] == '\"') {
         int i = 0;
         curnode = nalloc();
         curnode->string = stralloc();        
@@ -169,7 +187,7 @@ parse_token_ll()
         curnode->string[i] = '\0';
         return curnode;
     }
-    else if (c == '(') {
+    else if (token[0] == '(') {
         int i;
 
         topnode = curnode = nalloc();
@@ -186,12 +204,12 @@ parse_token_ll()
         curnode->type = NIL;
         return topnode;
     }
-    else if (c == ')') {
+    else if (token[0] == ')') {
         curnode = nalloc();
         curnode->type = NIL;
         return curnode;
     }
-    else if (c == '\'') {
+    else if (token[0] == '\'') {
         topnode = curnode = nalloc();
 
         nextnode = nalloc();
