@@ -67,6 +67,9 @@ token[i] = '\0';
 struct node **
 parse_list(int *nlist);
 
+char *
+parse_string();
+
 struct node *
 parse_token()
 {
@@ -104,17 +107,9 @@ parse_token()
   else if (token[0] == '\"') 
     {
       // todo glib strings
-      int i = 0;
       curnode = nalloc();
       curnode->type = STRING;
-      curnode->string = stralloc();        
-
-      while (((c = getch()) != EOF) && (c != '\"')) 
-        {
-          curnode->string[i] = c;
-          i++;
-        }
-      curnode->string[i] = '\0';
+      curnode->string = parse_string();
       return curnode;
     }
   else if (token[0] == '\'') 
@@ -178,6 +173,23 @@ parse_list(int *nlist)
     }
   return list;
 }
+
+char *
+parse_string()
+{
+  // todo glib strings
+  char *string = stralloc();        
+  int c, i = 0;
+
+  while (((c = getch()) != EOF) && (c != '\"')) 
+    {
+      string[i] = c;
+      i++;
+    }
+  string[i] = '\0';
+  return string;
+}
+
 struct node *
 parse_token_ll()
 {
