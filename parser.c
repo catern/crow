@@ -126,13 +126,12 @@ parse_comment()
 struct node *
 parse_token(char *token)
 {
-  struct node *result = nalloc();
   if (token[0] == ')') 
     {
       return NULL;
     }
   else if ((isdigit(token[0])) 
-      || (token[0] == '-' || token[0] == '.') && isdigit(token[1])) 
+           || (token[0] == '-' || token[0] == '.') && isdigit(token[1])) 
     {
       /* next node will be a number */
       return double_to_node(strtod(token, NULL));
@@ -165,7 +164,6 @@ parse_list()
 struct node *
 parse_string()
 {
-  // todo glib strings
   struct node *result = nalloc();
   result->type = STRING;
   result->string = stralloc();        
@@ -206,15 +204,7 @@ parse_token_ll()
     
   gettoken(token);
   if (token[0] == '\"') {
-    int i = 0;
-    curnode = nalloc();
-    curnode->string = stralloc();        
-
-    while (((c = getch()) != EOF) && (c != '\"')) {
-      g_string_append_c(curnode->string, c);
-    }
-    curnode->type = STRING;
-    return curnode;
+    return parse_string();
   }
   else if (token[0] == '(') {
     int i;
@@ -257,49 +247,32 @@ parse_token_ll()
 
     return topnode;
   }
-  else if ((token[0] == '-' && isdigit(token[1])) || isdigit(token[0])) {
-    /* next node will be a number */
-    int n;
-    n = atof(token);
-
-    curnode = nalloc();
-    curnode->type = NUMBER;
-    curnode->number = n;
-    return curnode;
-  }
   else {
-    /* next node will be a symbol */
-    curnode = nalloc();
-    curnode->type = SYMBOL;
-    curnode->symbol = g_intern_string(token);
-    return curnode;
+    return parse_token(token);
   }
 }
 
 struct node *
 parse_file(char *filename)
 {
-    struct node *root = nalloc();
-
     // reads the entire file into readbuf
     GError *error;
     if (!g_file_get_contents(filename, &readbuf, &readlength, &error)) {
         printf("%s\n", error->message);
         g_error_free(error);
-        root->type = NIL;
-        return root;
+        return nil_alloc();
     }
 
-    root->type = LIST;
-    root->list = nlistalloc();
-    root->list[0] = symbol_to_node(g_intern_string("begin"));
+    struct node **list = nlistalloc();
 
+    list[0] = symbol_to_node(g_intern_string("begin"));
     int i = 1;
+
     // parses what is currently in the queue
     while (readbufp < readlength) {
-      root->list[i++] = parse();
+      list[i++] = parse();
     }
-    root->nlist = i;
+
     g_free(readbuf);
-    return root;
+    return list_to_node(list, i);
 }
