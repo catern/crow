@@ -192,7 +192,7 @@ parse_quote()
 }
 
 struct node *
-parse_token_ll()
+parse_ll()
 {
   // this parses tokens into linked lists (lists constructed from pairs) instead of array list types
   char token[MAXTOKEN];
@@ -203,53 +203,39 @@ parse_token_ll()
   struct node *nextnode;
     
   gettoken(token);
-  if (token[0] == '\"') {
-    return parse_string();
-  }
-  else if (token[0] == '(') {
-    int i;
-
-    topnode = curnode = nalloc();
-
-    i = 0;
-    while ((nextnode = parse_token_ll())->type != NIL) {
-      curnode->type = PAIR;
-      curnode->pair = pairalloc();
-      curnode->pair->car = nextnode;
-      curnode->pair->cdr = nalloc();
-      curnode = curnode->pair->cdr;
-      i++;
+  if (token[0] == '\"')
+    {
+      return parse_string();
     }
-    curnode->type = NIL;
-    return topnode;
-  }
-  else if (token[0] == ')') {
-    return nil_alloc();
-  }
-  else if (token[0] == '\'') {
-    topnode = curnode = nalloc();
+  else if (token[0] == '(') 
+    {
+      if ((nextnode = parse_ll()) == NULL)
+        {
+          return nil_alloc();
+        }
+      else
+        {
+          topnode = curnode = pair_to_node(nextnode, NULL);
+        }
 
-    nextnode = nalloc();
-    nextnode->type = SYMBOL;
-    nextnode->symbol = g_intern_string("quote");
-
-    curnode->type = PAIR;
-    curnode->pair = pairalloc();
-    curnode->pair->car = nextnode;
-    nextnode = nalloc();
-    curnode->pair->cdr = nextnode;
-    curnode = nextnode;
-
-    curnode->type = PAIR;
-    curnode->pair = pairalloc();
-    curnode->pair->car = parse_token_ll();
-    curnode->pair->cdr = nil_alloc();
-
-    return topnode;
-  }
-  else {
-    return parse_token(token);
-  }
+      while ((nextnode = parse_ll()) != NULL) 
+        {
+          curnode->pair->cdr = pair_to_node(nextnode, NULL);
+          curnode = curnode->pair->cdr;
+        }
+      curnode->pair->cdr = nil_alloc();
+      return topnode;
+    }
+  else if (token[0] == '\'')
+    {
+      return pair_to_node(symbol_to_node(g_intern_string("quote")),
+                          pair_to_node(parse_ll(),
+                                       nil_alloc()));
+    }
+  else 
+    {
+      return parse_token(token);
+    }
 }
 
 struct node *

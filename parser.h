@@ -5,7 +5,7 @@ struct node *
 parse();
 
 struct node *
-parse_token_ll();
+parse_ll();
 
 struct node *
 parse_file(char *filename);

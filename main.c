@@ -167,7 +167,7 @@ copy_environment_list(struct environment **oldenv)
 }
 
 void
-bind_in_current_env(struct environment **envlist, const char *symbol, struct node *value)
+bind_in_current_env(struct environment **envlist, const gchar *symbol, struct node *value)
 {
     int i, j;
 
@@ -230,7 +230,6 @@ lookup_value(struct environment **envlist, struct node *expr)
     return result;
 }
 
-
 // evaluation
 int
 special_form(struct node *expr)
@@ -262,7 +261,6 @@ special_form(struct node *expr)
     else
         return 0;
 }
-
 
 struct node *
 eval(struct node *expr, struct environment **env)
@@ -794,7 +792,7 @@ read_list()
     while ((c = getch()) != '\n') {
         if (!iswspace(c)) {
             ungetch(c);
-            root = parse_token_ll();
+            root = parse_ll();
             //print_node(root);
         }
     } 
