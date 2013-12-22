@@ -24,6 +24,70 @@ malloc_mon(size_t size, freefunc ff)
   return alloc;
 }
 
+struct pair *
+pairalloc()
+{
+  return (struct pair *) malloc_mon(sizeof(struct pair), &free);
+}
+
+struct node *
+nalloc()
+{
+  return (struct node *) malloc_mon(sizeof(struct node), &free);
+}
+
+struct node **
+nlistalloc()
+{
+  struct node **nlist = (struct node **) 
+    malloc_mon(sizeof(struct node *) * MAXLIST, &free);
+  return nlist;
+}
+
+const gchar **
+tokenlistalloc()
+{
+  return (const gchar **) malloc_mon(sizeof(const gchar *) * MAXVAR, &free);
+}
+
+struct environment *
+envalloc()
+{
+  return (struct environment *) malloc_mon(sizeof(struct environment), &free);
+}
+
+struct environment **
+envlistalloc()
+{
+  return (struct environment **) malloc_mon(sizeof(struct environment *) * MAXENV, &free);
+}
+
+struct procedure *
+procalloc()
+{
+  return (struct procedure *) malloc_mon(sizeof(struct procedure), &free);
+}
+
+struct variable *
+varalloc()
+{
+  return (struct variable *) malloc_mon(sizeof(struct variable), &free);
+}
+
+struct variable **
+varlistalloc()
+{
+  return (struct variable **) malloc_mon(sizeof(struct variable *) * MAXVAR, &free);
+}
+
+struct node *
+nil_alloc()
+{
+  struct node *nil = malloc_mon(sizeof(struct node), &free);
+  nil->type = NIL;
+  return nil;
+}
+
 GString *
 stralloc(char *init)
 {

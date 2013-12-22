@@ -145,6 +145,7 @@ extend_envlist(struct environment **envlist, struct variable **varlist, int n)
         ;
     // set the end of the envlist to newenv
     envlist[i] = newenv;
+    envlist[i+1] = NULL;
 }
 
 struct environment **
@@ -164,6 +165,7 @@ copy_environment_list(struct environment **oldenv)
             newenv[i]->vars[j]->value = oldenv[i]->vars[j]->value;
         }
     }
+    newenv[i] = NULL;
     return newenv;
 }
 
