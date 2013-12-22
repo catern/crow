@@ -238,25 +238,25 @@ int
 special_form(struct node *expr)
 {
     if (expr->type == SYMBOL) {
-        if (expr->symbol == g_intern_string("if")) 
+        if (expr->symbol == ("if")) 
             return IF;
-        else if (expr->symbol == g_intern_string("define")) 
+        else if (expr->symbol == ("define")) 
             return DEFINE;
-        else if (expr->symbol == g_intern_string("lambda")) 
+        else if (expr->symbol == ("lambda")) 
             return LAMBDA;
-        else if (expr->symbol == g_intern_string("delay")) 
+        else if (expr->symbol == ("delay")) 
             return DELAY;
-        else if (expr->symbol == g_intern_string("quote")) 
+        else if (expr->symbol == ("quote")) 
             return QUOTE;
-        else if (expr->symbol == g_intern_string("cond")) 
+        else if (expr->symbol == ("cond")) 
             return COND;
-        else if (expr->symbol == g_intern_string("let")) 
+        else if (expr->symbol == ("let")) 
             return LET;
-        else if (expr->symbol == g_intern_string("set-car!")) 
+        else if (expr->symbol == ("set-car!")) 
             return SETCAR;
-        else if (expr->symbol == g_intern_string("set-cdr!")) 
+        else if (expr->symbol == ("set-cdr!")) 
             return SETCDR;
-        else if (expr->symbol == g_intern_string("load")) 
+        else if (expr->symbol == ("load")) 
             return LOAD;
         else
             return 0;
@@ -367,7 +367,7 @@ eval_let(struct node *expr, struct environment **env)
     struct node *body = list_to_node(nlistalloc(), expr->nlist - 1);
 
     // put begin node at the beginning of list
-    body->list[0] = symbol_to_node(g_intern_string("begin")); 
+    body->list[0] = symbol_to_node(("begin")); 
 
     // rest of list is the expressions from the let
     for (i = 1; i+1 < expr->nlist; i++) {
@@ -384,7 +384,7 @@ eval_cond(struct node *expr, struct environment **env)
     int i;
     for (i = 1; i < expr->nlist; i++) 
       {
-        if ((expr->list[i]->list[0]->type == SYMBOL && (expr->list[i]->list[0]->symbol == g_intern_string("else"))) 
+        if ((expr->list[i]->list[0]->type == SYMBOL && (expr->list[i]->list[0]->symbol == ("else"))) 
             || istrue(expr->list[i]->list[0], env)) 
           {
             return eval(expr->list[i]->list[1], env);
@@ -441,7 +441,7 @@ eval_define(struct node *expr, struct environment **env)
     struct node *body = list_to_node(nlistalloc(), expr->nlist - 1);
 
     // put begin node at the beginning of list
-    body->list[0] = symbol_to_node(g_intern_string("begin")); 
+    body->list[0] = symbol_to_node(("begin")); 
 
     // rest of list is the expressions from the let
     for (j = 1; j+1 < expr->nlist; j++) {
@@ -604,7 +604,7 @@ apply_prim(struct node *proc, struct node *args[], int n)
     double total;
     struct node *result;
 
-    if (proc->symbol == g_intern_string("+")) 
+    if (proc->symbol == ("+")) 
       {
         total = 0;
         for (i = 0; i < n; i++)
@@ -613,7 +613,7 @@ apply_prim(struct node *proc, struct node *args[], int n)
           }
         result = double_to_node(total);
       }
-    else if (proc->symbol == g_intern_string("-"))
+    else if (proc->symbol == ("-"))
       {
         total = args[0]->number;
         for (i = 1; i < n; i++)
@@ -622,7 +622,7 @@ apply_prim(struct node *proc, struct node *args[], int n)
           }
         result = double_to_node(total);
       }
-    else if (proc->symbol == g_intern_string("*"))
+    else if (proc->symbol == ("*"))
       {
         total = 1;
         for (i = 0; i < n; i++)
@@ -631,7 +631,7 @@ apply_prim(struct node *proc, struct node *args[], int n)
           }
         result = double_to_node(total);
       }
-    else if (proc->symbol == g_intern_string("/"))
+    else if (proc->symbol == ("/"))
       {
         total = args[0]->number;
         for (i = 1; i < n; i++)
@@ -640,7 +640,7 @@ apply_prim(struct node *proc, struct node *args[], int n)
           }
         result = double_to_node(total);
       }
-    else if (proc->symbol == g_intern_string("=")) 
+    else if (proc->symbol == ("=")) 
       {
         total = 1;
         for (i = 0; i < n; i++)
@@ -649,73 +649,73 @@ apply_prim(struct node *proc, struct node *args[], int n)
           }
         result = bool_to_node(total);
       }
-    else if (proc->symbol == g_intern_string("<")) 
+    else if (proc->symbol == ("<")) 
       {
         result = bool_to_node((args[0]->number < args[1]->number));
       }
-    else if (proc->symbol == g_intern_string(">")) 
+    else if (proc->symbol == (">")) 
       {
         result = bool_to_node((args[0]->number > args[1]->number));
       }
-    else if (proc->symbol == g_intern_string("abs")) 
+    else if (proc->symbol == ("abs")) 
       {
         total = fabs(args[0]->number);
         result = double_to_node(total);
       }
-    else if (proc->symbol == g_intern_string("cons")) 
+    else if (proc->symbol == ("cons")) 
       {
         result = pair_to_node(args[0],args[1]);
       }
-    else if (proc->symbol == g_intern_string("car"))
+    else if (proc->symbol == ("car"))
       {
         result = args[0]->pair->car;
       }
-    else if (proc->symbol == g_intern_string("cdr"))
+    else if (proc->symbol == ("cdr"))
       {
         result = args[0]->pair->cdr;
       }
-    else if (proc->symbol == g_intern_string("null?")) 
+    else if (proc->symbol == ("null?")) 
       {
         result = bool_to_node((args[0]->type == NIL));
       }
-    else if (proc->symbol == g_intern_string("number?"))
+    else if (proc->symbol == ("number?"))
       {
         result = bool_to_node((args[0]->type == NUMBER));
       }
-    else if (proc->symbol == g_intern_string("string?"))
+    else if (proc->symbol == ("string?"))
       {
         result = bool_to_node((args[0]->type == STRING));
       }
-    else if (proc->symbol == g_intern_string("symbol?")) 
+    else if (proc->symbol == ("symbol?")) 
       {
         result = bool_to_node((args[0]->type == SYMBOL));
       }
-    else if (proc->symbol == g_intern_string("pair?"))
+    else if (proc->symbol == ("pair?"))
       {
         result = bool_to_node((args[0]->type == PAIR));
       }
-    else if (proc->symbol == g_intern_string("read"))
+    else if (proc->symbol == ("read"))
       {
         result = read_list();
       }
-    else if (proc->symbol == g_intern_string("eq?")) 
+    else if (proc->symbol == ("eq?")) 
       {
         result = bool_to_node(node_equal(args[0], args[1]));
       }
-    else if (proc->symbol == g_intern_string("display")) 
+    else if (proc->symbol == ("display")) 
       {
         minimal_print_node(args[0]);
         result = nil_alloc();
       }
-    else if (proc->symbol == g_intern_string("begin"))
+    else if (proc->symbol == ("begin"))
       {
         result = args[n-1];
       }
-    else if (proc->symbol == g_intern_string("apply")) 
+    else if (proc->symbol == ("apply")) 
       {
         result = apply(args[0],(args+1),(n-1));
       }
-    else if (proc->symbol == g_intern_string("listconv")) 
+    else if (proc->symbol == ("listconv")) 
       {
         result = list_to_ll(args, n);
       }
@@ -728,56 +728,57 @@ apply_prim(struct node *proc, struct node *args[], int n)
 
 primitive_proc(struct node *proc)
 {
-    if (proc->type == SYMBOL) {
-        if (proc->symbol[0] == '+')
-            return 1;
-        else if (proc->symbol == g_intern_string("-"))
-            return 1;
-        else if (proc->symbol == g_intern_string("*"))
-            return 1;
-        else if (proc->symbol == g_intern_string("/"))
-            return 1;
-        else if (proc->symbol == g_intern_string("="))
-            return 1;
-        else if (proc->symbol == g_intern_string(">"))
-            return 1;
-        else if (proc->symbol == g_intern_string("<"))
-            return 1;
-        else if (proc->symbol == g_intern_string("abs"))
-            return 1;
-        else if (proc->symbol == g_intern_string("cons"))
-            return 1;
-        else if (proc->symbol == g_intern_string("car"))
-            return 1;
-        else if (proc->symbol == g_intern_string("cdr"))
-            return 1;
-        else if (proc->symbol == g_intern_string("null?"))
-            return 1;
-        else if (proc->symbol == g_intern_string("number?"))
-            return 1;
-        else if (proc->symbol == g_intern_string("symbol?"))
-            return 1;
-        else if (proc->symbol == g_intern_string("string?"))
-            return 1;
-        else if (proc->symbol == g_intern_string("pair?"))
-            return 1;
-        else if (proc->symbol == g_intern_string("eq?"))
-            return 1;
-        else if (proc->symbol == g_intern_string("read"))
-            return 1;
-        else if (proc->symbol == g_intern_string("display"))
-            return 1;
-        else if (proc->symbol == g_intern_string("begin"))
-            return 1;
-        else if (proc->symbol == g_intern_string("apply"))
-            return 1;
-        else if (proc->symbol == g_intern_string("listconv"))
-            return 1;
-        else
-            return 0;
-    }
-    else
+  if (proc->type == SYMBOL) 
+    {
+      if (proc->symbol == ("+"))
+        return 1;
+      else if (proc->symbol == ("-"))
+        return 1;
+      else if (proc->symbol == ("*"))
+        return 1;
+      else if (proc->symbol == ("/"))
+        return 1;
+      else if (proc->symbol == ("="))
+        return 1;
+      else if (proc->symbol == (">"))
+        return 1;
+      else if (proc->symbol == ("<"))
+        return 1;
+      else if (proc->symbol == ("abs"))
+        return 1;
+      else if (proc->symbol == ("cons"))
+        return 1;
+      else if (proc->symbol == ("car"))
+        return 1;
+      else if (proc->symbol == ("cdr"))
+        return 1;
+      else if (proc->symbol == ("null?"))
+        return 1;
+      else if (proc->symbol == ("number?"))
+        return 1;
+      else if (proc->symbol == ("symbol?"))
+        return 1;
+      else if (proc->symbol == ("string?"))
+        return 1;
+      else if (proc->symbol == ("pair?"))
+        return 1;
+      else if (proc->symbol == ("eq?"))
+        return 1;
+      else if (proc->symbol == ("read"))
+        return 1;
+      else if (proc->symbol == ("display"))
+        return 1;
+      else if (proc->symbol == ("begin"))
+        return 1;
+      else if (proc->symbol == ("apply"))
+        return 1;
+      else if (proc->symbol == ("listconv"))
+        return 1;
+      else
         return 0;
+    }
+  else
+    return 0;
 }
 
 struct node *
@@ -803,9 +804,57 @@ read_list()
     return root;
 }
 
+void
+init_intern()
+{
+  // primitives
+  g_intern_static_string("+");
+  g_intern_static_string("-");
+  g_intern_static_string("*");
+  g_intern_static_string("/");
+  g_intern_static_string("=");
+  g_intern_static_string(">");
+  g_intern_static_string("<");
+  g_intern_static_string("abs");
+  g_intern_static_string("cons");
+  g_intern_static_string("car");
+  g_intern_static_string("cdr");
+  g_intern_static_string("null?");
+  g_intern_static_string("number?");
+  g_intern_static_string("symbol?");
+  g_intern_static_string("string?");
+  g_intern_static_string("pair?");
+  g_intern_static_string("eq?");
+  g_intern_static_string("read");
+  g_intern_static_string("display");
+  g_intern_static_string("begin");
+  g_intern_static_string("apply");
+  g_intern_static_string("listconv");
+
+  // special forms
+  g_intern_static_string("if");
+  g_intern_static_string("define");
+  g_intern_static_string("lambda");
+  g_intern_static_string("delay");
+  g_intern_static_string("quote");
+  g_intern_static_string("cond");
+  g_intern_static_string("let");
+  g_intern_static_string("set-car!");
+  g_intern_static_string("set-cdr!");
+  g_intern_static_string("load");
+
+  // other?
+  g_intern_static_string("else");
+  g_intern_static_string("nil");
+
+}
+
 main()
 {
     int c;
+    
+    // intern all our internally used strings
+    init_intern();
 
     // the global environment
     struct environment **globalenv = envlistalloc();
@@ -814,7 +863,7 @@ main()
 
     // the symbol nil is manually bound to the value nil 
     struct node *nil = nil_alloc();
-    bind_in_current_env(globalenv, g_intern_string("nil"), nil);
+    bind_in_current_env(globalenv, ("nil"), nil);
 
     // get our defaults
     eval(parse_file("defaults.scm"), globalenv);
