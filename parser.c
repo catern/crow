@@ -292,9 +292,7 @@ parse_file(char *filename)
 
     root->type = LIST;
     root->list = nlistalloc();
-    root->list[0] = nalloc(); 
-    root->list[0]->type = SYMBOL;
-    root->list[0]->symbol = g_intern_string("begin");
+    root->list[0] = symbol_to_node(g_intern_string("begin"));
 
     int i = 1;
     // parses what is currently in the queue

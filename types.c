@@ -24,12 +24,6 @@ nlistalloc()
   return nlist;
 }
 
-char *
-tokenalloc()
-{
-  return (char *) malloc_mon(sizeof(char[MAXTOKEN]), &free);
-}
-
 const gchar **
 tokenlistalloc()
 {

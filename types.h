@@ -57,9 +57,6 @@ nalloc();
 struct node **
 nlistalloc();
 
-char *
-tokenalloc();
-
 const gchar **
 tokenlistalloc();
 
