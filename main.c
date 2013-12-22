@@ -232,13 +232,6 @@ lookup_value(struct environment **envlist, struct node *expr)
 
 
 // evaluation
-gboolean
-symbols_equal(const gchar *a, const gchar *b)
-{
-  return g_intern_string(a) == b;
-}
-
-
 int
 special_form(struct node *expr)
 {
