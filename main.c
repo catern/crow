@@ -57,7 +57,7 @@ struct node *
 eval_load(struct node *, struct environment **);
 
 struct variable *
-lookup(char *, struct environment **);
+lookup(const gchar *, struct environment **);
 
 struct environment **
 copy_environment_list(struct environment **);
@@ -167,7 +167,7 @@ copy_environment_list(struct environment **oldenv)
 }
 
 void
-bind_in_current_env(struct environment **envlist, char *symbol, struct node *value)
+bind_in_current_env(struct environment **envlist, const char *symbol, struct node *value)
 {
     int i, j;
 
@@ -192,7 +192,7 @@ bind_in_current_env(struct environment **envlist, char *symbol, struct node *val
 }
 
 struct variable *
-lookup(char *symbol, struct environment **envlist)
+lookup(const gchar *symbol, struct environment **envlist)
 {   
     int i, j;
     struct variable *result;
@@ -408,7 +408,7 @@ eval_delay(struct node *expr, struct environment **env)
 struct node *
 eval_lambda(struct node *expr, struct environment **env)
 {
-  char *arglist[expr->list[1]->nlist];
+  const gchar *arglist[expr->list[1]->nlist];
   int i;
 
   // collects the tokens from the list in the second position in another array
@@ -424,13 +424,13 @@ struct node *
 eval_define(struct node *expr, struct environment **env)
 {
   struct node *varvalue;
-  char *name;
+  const gchar *name;
 
   if (expr->list[1]->type == LIST) {
     name = expr->list[1]->list[0]->symbol;
 
     // arglist
-    char *arglist[expr->list[1]->nlist - 1];
+    const gchar *arglist[expr->list[1]->nlist - 1];
     int i,j;
     for (i = 0; i+1 < expr->list[1]->nlist; i++) {
       arglist[i] = expr->list[1]->list[i+1]->symbol;

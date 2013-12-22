@@ -92,7 +92,7 @@ env_pointers(GHashTable *inuse,  struct environment **env)
         mark_used(inuse, env[i]->vars);
         for (j = 0; env[i]->vars[j] != NULL; j++) {
             mark_used(inuse, env[i]->vars[j]);
-            mark_used(inuse, env[i]->vars[j]->symbol);
+            //mark_used(inuse, env[i]->vars[j]->symbol);
             node_pointers(inuse, env[i]->vars[j]->value);
         }
     }
@@ -125,7 +125,7 @@ node_pointers(GHashTable *inuse, struct node *expr)
             // ain't no pointers here!
             break;
         case SYMBOL:
-            mark_used(inuse, expr->symbol);
+          //mark_used(inuse, expr->symbol);
             break;
         case STRING:
             mark_used(inuse, expr->string);
@@ -138,7 +138,6 @@ node_pointers(GHashTable *inuse, struct node *expr)
         case NIL:
             break;
         default:
-            mark_used(inuse, expr->symbol);
             printf("node_pointers: unknown type %d\n", expr->type);
     }
 }
@@ -160,7 +159,7 @@ proc_pointers(GHashTable *inuse,  struct procedure *proc)
     env_pointers(inuse, proc->env);
     // process the args of the proc 
     mark_used(inuse, proc->symbols);
-    for (i=0; i < proc->nargs ; i++) {
-        mark_used(inuse, proc->symbols[i]);
-    }
+    /* for (i=0; i < proc->nargs ; i++) { */
+    /*     mark_used(inuse, proc->symbols[i]); */
+    /* } */
 }

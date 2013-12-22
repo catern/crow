@@ -140,7 +140,7 @@ parse_token(char *token)
   else 
     {
       /* next node will be a symbol */
-      return symbol_to_node(token);
+      return symbol_to_node(g_intern_string(token));
     }
 }
 
@@ -187,10 +187,7 @@ parse_quote()
   result->type = LIST;
   result->list = nlistalloc();
 
-  result->list[0] = nalloc();
-  result->list[0]->type = SYMBOL;
-  result->list[0]->symbol = tokenalloc();
-  strcpy(result->list[0]->symbol, "quote");
+  result->list[0] = symbol_to_node(g_intern_string("quote"));
 
   result->list[1] = parse();
   return result;
@@ -243,11 +240,8 @@ parse_token_ll()
     topnode = curnode = nalloc();
 
     nextnode = nalloc();
-    char *quote;
-    quote = tokenalloc();
-    strcpy(quote, "quote");
     nextnode->type = SYMBOL;
-    nextnode->symbol = quote;
+    nextnode->symbol = g_intern_string("quote");
 
     curnode->type = PAIR;
     curnode->pair = pairalloc();
@@ -275,13 +269,9 @@ parse_token_ll()
   }
   else {
     /* next node will be a symbol */
-    char *symbol;
-    symbol = tokenalloc();
-    strcpy(symbol, token);
-
     curnode = nalloc();
     curnode->type = SYMBOL;
-    curnode->symbol = symbol;
+    curnode->symbol = g_intern_string(token);
     return curnode;
   }
 }
@@ -304,8 +294,7 @@ parse_file(char *filename)
     root->list = nlistalloc();
     root->list[0] = nalloc(); 
     root->list[0]->type = SYMBOL;
-    root->list[0]->symbol = tokenalloc();
-    strcpy(root->list[0]->symbol,"begin");
+    root->list[0]->symbol = g_intern_string("begin");
 
     int i = 1;
     // parses what is currently in the queue

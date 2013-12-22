@@ -1,7 +1,6 @@
 #include <glib.h>
 
 #define MAXTOKEN 100
-#define MAXSTRING 1000
 #define MAXCHARBUF 100
 
 #define MAXVAR 200
@@ -18,7 +17,7 @@ IF, LAMBDA, DEFINE, DELAY, QUOTE, COND, LET, SETCAR, SETCDR, LOAD};
 //remember to edit node_copy when editing this
 struct node {
     int type;
-    char *symbol;
+    const gchar *symbol;
     double number;
     struct node **list;
     struct procedure *proc;
@@ -33,7 +32,7 @@ struct pair {
 };
 
 struct variable {
-    char *symbol;
+    const gchar *symbol;
     struct node *value;
 };
 
@@ -43,7 +42,7 @@ struct environment {
 };
 
 struct procedure {
-    char **symbols;
+    const gchar **symbols;
     struct node *body;
     struct environment **env;
     int nargs;
@@ -61,7 +60,7 @@ nlistalloc();
 char *
 tokenalloc();
 
-char **
+const gchar **
 tokenlistalloc();
 
 struct environment *
@@ -92,13 +91,13 @@ struct node *
 pair_to_node(struct node *car, struct node *cdr);
 
 struct node *
-symbol_to_node(char *symbol);
+symbol_to_node(const gchar *symbol);
 
 struct node *
 string_to_node(char *string);
 
 struct node *
-procedure_to_node(char **args, int n, struct node *body, struct environment **env);
+procedure_to_node(const gchar **args, int n, struct node *body, struct environment **env);
 
 struct node *
 list_to_node(struct node **list, int n);

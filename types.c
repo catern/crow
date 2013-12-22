@@ -30,10 +30,10 @@ tokenalloc()
   return (char *) malloc_mon(sizeof(char[MAXTOKEN]), &free);
 }
 
-char **
+const gchar **
 tokenlistalloc()
 {
-  return (char **) malloc_mon(sizeof(char[MAXTOKEN]) * MAXVAR, &free);
+  return (const gchar **) malloc_mon(sizeof(const gchar *) * MAXVAR, &free);
 }
 
 struct environment *
@@ -117,12 +117,11 @@ pair_to_node(struct node *car, struct node *cdr)
 }
 
 struct node *
-symbol_to_node(char *symbol)
+symbol_to_node(const gchar *symbol)
 {
   struct node *result = nalloc();
   result->type = SYMBOL;
-  result->symbol = tokenalloc();
-  strcpy(result->symbol, symbol);
+  result->symbol = symbol;
 
   return result;
 }
@@ -138,7 +137,7 @@ string_to_node(char *string)
 }
 
 struct node *
-procedure_to_node(char **args, int n, struct node *body, struct environment **env)
+procedure_to_node(const gchar **args, int n, struct node *body, struct environment **env)
 {
   struct node *result = nalloc();
   result->type = PROC;
@@ -154,8 +153,7 @@ procedure_to_node(char **args, int n, struct node *body, struct environment **en
       int i;
       for (i = 0; i < n; i++) 
         {
-          result->proc->symbols[i] = tokenalloc();
-          strcpy(result->proc->symbols[i],args[i]);
+          result->proc->symbols[i] = args[i];
         }
     }
 
