@@ -121,6 +121,8 @@ parse_comment()
   while ((c = getch()) != '\n')
     ;
   return nil_alloc();
+  // plausible alternative
+  /* return parse(); */
 }
 
 struct node *
@@ -146,19 +148,15 @@ parse_token(char *token)
 struct node *
 parse_list()
 {
-  struct node *curnode;
-  struct node *result = nalloc();
-  result->type = LIST;
-  result->list = nlistalloc();
+  struct node **list = nlistalloc();
 
   int i = 0;
-  while ((result->list[i++] = parse()) != NULL)
+  while ((list[i++] = parse()) != NULL)
     {
       ;
     }
 
-  result->nlist = i-1;
-  return result;
+  return list_to_node(list, i-1);
 }
 
 struct node *
@@ -196,7 +194,6 @@ parse_ll()
 {
   // this parses tokens into linked lists (lists constructed from pairs) instead of array list types
   char token[MAXTOKEN];
-  int c;
 
   struct node *topnode;
   struct node *curnode;
@@ -241,13 +238,13 @@ parse_ll()
 struct node *
 parse_file(char *filename)
 {
-    // reads the entire file into readbuf
-    GError *error;
-    if (!g_file_get_contents(filename, &readbuf, &readlength, &error)) {
-        printf("%s\n", error->message);
-        g_error_free(error);
-        return nil_alloc();
-    }
+  // reads the entire file into readbuf
+  GError *error;
+  if (!g_file_get_contents(filename, &readbuf, &readlength, &error)) {
+    printf("%s\n", error->message);
+    g_error_free(error);
+    return nil_alloc();
+  }
 
     struct node **list = nlistalloc();
 

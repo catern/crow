@@ -1,5 +1,6 @@
 /* insert GPLv3+ here */
 /* TODO: 
+   use glib lists for something
    gliiiiiiiiiiib
    switch to union types (requires major refactoring)
 */
@@ -14,17 +15,17 @@
 #include "parser.h"
 
 /* EVAL STEP, BEGIN! */
-struct node *
-eval_setcar(struct node *, struct environment **);
+struct variable *
+lookup(const gchar *, struct environment **);
+
+struct environment **
+copy_environment_list(struct environment **);
 
 struct node *
-eval_setcdr(struct node *, struct environment **);
+node_copy(struct node *);
 
 struct node *
-apply(struct node *, struct node **, int);
-
-struct node *
-apply_prim(struct node *, struct node **, int);
+read_list(void);
 
 struct node *
 eval_if(struct node *, struct environment **);
@@ -36,7 +37,10 @@ struct node *
 eval_let(struct node *, struct environment **);
 
 struct node *
-read_list(void);
+eval_setcar(struct node *, struct environment **);
+
+struct node *
+eval_setcdr(struct node *, struct environment **);
 
 struct node *
 eval_define(struct node *, struct environment **); 
@@ -56,14 +60,11 @@ eval_application(struct node *, struct environment **);
 struct node *
 eval_load(struct node *, struct environment **);
 
-struct variable *
-lookup(const gchar *, struct environment **);
-
-struct environment **
-copy_environment_list(struct environment **);
+struct node *
+apply(struct node *, struct node **, int);
 
 struct node *
-node_copy(struct node *);
+apply_prim(struct node *, struct node **, int);
 
 struct node *
 node_copy(struct node *oldnode)
@@ -793,7 +794,7 @@ read_list()
         if (!iswspace(c)) {
             ungetch(c);
             root = parse_ll();
-            //print_node(root);
+            /* print_node(root); */
         }
     } 
     ungetch('\n');
@@ -809,8 +810,8 @@ main()
     globalenv[0] = envalloc();
     globalenv[0]->vars = varlistalloc();
 
-    struct node *nil = nil_alloc();
     // the symbol nil is manually bound to the value nil 
+    struct node *nil = nil_alloc();
     bind_in_current_env(globalenv, g_intern_string("nil"), nil);
 
     // get our defaults
@@ -818,21 +819,23 @@ main()
     /* eval(parse_file("example.scm"), globalenv); */
 
     printf(">>");
-    while ((c = getch()) != EOF) {
-        if (!iswspace(c)) {
+    while ((c = getch()) != EOF) 
+      {
+        if (!iswspace(c)) 
+          {
             ungetch(c);
 
             /* // parse our input */
-            /* // and get the root of the resulting s expression */
+            /* // and get the root of the resulting s-expression */
             /* struct node *root = parse(); */
 
             /* // print the unevaled s-exp */
             /* //print_node(root); */
 
-            /* // eval the s expression */
+            /* // eval the s-exp*/
             /* struct node *result = eval(root, globalenv); */
 
-            /* // print the resulting s expression */
+            /* // print the resulting s-exp */
             /* print_node(result); */
             
             // do it all
@@ -840,13 +843,18 @@ main()
 
             // free pointers that cannot be accessed
             garbage_collect(globalenv);
-        }
-        else if (c == ' ' || c == '\t')
-            ;
-        else 
+
+            if (c == ';')
+              // that was a comment 
+              // the parser will eat the newline, so print our prefix anyway
+              {
+                printf(">>");
+              }
+          }
+        else if (c == '\n')
+          {
             printf(">>");
-        if (c == ';')
-            printf(">>");
-    }
+          }
+      }
     return 0;
 }
