@@ -1,6 +1,7 @@
 /* insert GPLv3+ here */
 /* TODO: 
-   use glib lists for something
+   remove use of copy_environment_list
+   use glib lists for environment lists 
    gliiiiiiiiiiib
    switch to union types (requires major refactoring)
 */
