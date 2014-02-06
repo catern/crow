@@ -1,4 +1,6 @@
-default:
+default: debug
+
+debug:
 	gcc $(shell pkg-config --cflags --libs glib-2.0) -DDEBUG -ggdb gc.c types.c parser.c printnode.c main.c
 
 profile:
