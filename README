@@ -1,1 +1,3 @@
 This is a simple Lisp interpreter. It's roughly a Scheme interpreter, although some planned features will make it much less Scheme-like.
+
+This repository also includes a few scheme files: some default functions, some examples, and the (not yet working) metacircular evaluator from SICP.
