@@ -1,3 +1,5 @@
+These notes are now extremely out of date. I stopped updating them soon after starting to use git.
+
 Done:
 Make define overwrite variables 
     (will also hopefully let me use procedures more than once)
@@ -13,7 +15,7 @@ Switched variable to using a pointer
     before evaluating the value of the variable
 Procedure environment is being modified instead of copy.
     due to returning a pointer to sublists instead of a copy of sublists
-    bcuz of an oversight in the copying algorithm
+    because of an oversight in the copying algorithm
     Fixed by centralizing and correcting the copying algorithm
 Add number of vars to environment
 Garbage collection

@@ -8,11 +8,13 @@
 
 #define MAXLIST 50
 
-enum 
+enum
 // data types
-{ NIL = 1, LIST, SYMBOL, NUMBER, STRING, PROC, PAIR, 
+{
+    NIL = 1, LIST, SYMBOL, NUMBER, STRING, PROC, PAIR,
 //special forms
-IF, LAMBDA, DEFINE, DELAY, QUOTE, COND, LET, SETCAR, SETCDR, LOAD};
+    IF, LAMBDA, DEFINE, DELAY, QUOTE, COND, LET, SETCAR, SETCDR, LOAD
+};
 
 //remember to edit node_copy when editing this
 struct node {
